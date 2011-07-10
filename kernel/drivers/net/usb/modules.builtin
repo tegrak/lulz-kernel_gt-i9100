@@ -1,0 +1,4 @@
+kernel/drivers/net/usb/usbnet.ko
+kernel/drivers/net/usb/cdc-svnet.ko
+kernel/drivers/net/usb/sipc4.ko
+kernel/drivers/net/usb/pdp.ko
