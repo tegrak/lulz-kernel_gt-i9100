@@ -9,6 +9,7 @@ TOOLCHAIN="$TOP_DIR/toolchain/arm-eabi-4.4.0/bin/arm-eabi-"
 ROOTFS_PATH="$TOP_DIR/root"
 
 # Copy Kernel Configuration File
+# Hello guys!
 # SHW-M250S
 # cp -f $KERNEL_PATH/arch/arm/configs/c1_defconfig $KERNEL_PATH/.config
 # GT-I9100
