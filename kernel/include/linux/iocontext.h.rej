@@ -1,0 +1,11 @@
+--- include/linux/iocontext.h
++++ include/linux/iocontext.h
+@@ -63,6 +73,8 @@
+ 
+ 	struct radix_tree_root radix_root;
+ 	struct hlist_head cic_list;
++	struct radix_tree_root bfq_radix_root;
++	struct hlist_head bfq_cic_list;
+ 	void __rcu *ioc_data;
+ };
+ 
