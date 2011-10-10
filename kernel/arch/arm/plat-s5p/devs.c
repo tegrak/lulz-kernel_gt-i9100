@@ -1090,6 +1090,8 @@ static struct android_usb_product usb_products[] = {
 		.bDeviceProtocol= 0x01,
 		.s		= ANDROID_KIES_CONFIG_STRING,
 		.mode		= USBSTATUS_SAMSUNG_KIES,
+		.multi_conf_functions[0] = usb_functions_mtp,
+		.multi_conf_functions[1] = usb_functions_mtp_acm,
 	},
 	{
 		.product_id	= SAMSUNG_UMS_PRODUCT_ID,

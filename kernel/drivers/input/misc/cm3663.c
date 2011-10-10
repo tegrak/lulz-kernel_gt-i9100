@@ -31,8 +31,7 @@
 #include <linux/uaccess.h>
 #include <linux/cm3663.h>
 
-#define ALS_BUFFER_NUM		10
-#define LIGHT_BUFFER_NUM	20
+#define LIGHT_BUFFER_NUM	5
 #define PROX_READ_NUM		40
 
 /* ADDSEL is LOW */
@@ -108,7 +107,6 @@ struct cm3663_data {
 	struct cm3663_platform_data *pdata;
 	bool als_buf_initialized;
 	bool on;
-	int als_value_buf[ALS_BUFFER_NUM];
 	int als_index_count;
 	int irq;
 	int avg[3];
@@ -199,14 +197,7 @@ static void cm3663_light_disable(struct cm3663_data *cm3663)
 
 static int lightsensor_get_alsvalue(struct cm3663_data *cm3663)
 {
-	int i = 0;
-	int j = 0;
 	int value = 0;
-	int als_avr_value;
-	unsigned int als_total = 0;
-	unsigned int als_index = 0;
-	unsigned int als_max = 0;
-	unsigned int als_min = 0;
 	u8 als_high, als_low;
 
 	#ifdef CONFIG_TARGET_LOCALE_KOR
@@ -226,35 +217,7 @@ static int lightsensor_get_alsvalue(struct cm3663_data *cm3663)
 	cm3663_i2c_read(cm3663, REGS_ALS_MSB, &als_high);
 
 	value = ((als_high << 8) | als_low) * 5;
-
-	als_index = (cm3663->als_index_count++) % ALS_BUFFER_NUM;
-
-	/*ALS buffer initialize (light sensor off ---> light sensor on) */
-	if (!cm3663->als_buf_initialized) {
-		cm3663->als_buf_initialized = true;
-		for (j = 0; j < ALS_BUFFER_NUM; j++)
-			cm3663->als_value_buf[j] = value;
-	} else
-		cm3663->als_value_buf[als_index] = value;
-
-	als_max = cm3663->als_value_buf[0];
-	als_min = cm3663->als_value_buf[0];
-
-	for (i = 0; i < ALS_BUFFER_NUM; i++) {
-		als_total += cm3663->als_value_buf[i];
-
-		if (als_max < cm3663->als_value_buf[i])
-			als_max = cm3663->als_value_buf[i];
-
-		if (als_min > cm3663->als_value_buf[i])
-			als_min = cm3663->als_value_buf[i];
-	}
-	als_avr_value = (als_total-(als_max+als_min))/(ALS_BUFFER_NUM-2);
-
-	if (cm3663->als_index_count == ALS_BUFFER_NUM-1)
-		cm3663->als_index_count = 0;
-
-	return als_avr_value;
+	return value;
 }
 
 static void proxsensor_get_avgvalue(struct cm3663_data *cm3663)
@@ -541,7 +504,7 @@ static void cm3663_work_func_light(struct work_struct *work)
 	if (cm3663->light_buffer == i) {
 		if (cm3663->light_count++ == LIGHT_BUFFER_NUM) {
 			input_report_abs(cm3663->light_input_dev,
-							ABS_MISC, als);
+							ABS_MISC, als + 1);
 			input_sync(cm3663->light_input_dev);
 			cm3663->light_count = 0;
 		}

@@ -134,7 +134,7 @@ static struct sched_log gExcpTaskLog[2][SCHED_LOG_MAX] __cacheline_aligned;
 static atomic_t gExcpTaskLogIdx[2] = { ATOMIC_INIT(-1), ATOMIC_INIT(-1) };
 static unsigned long long gExcpIrqExitTime[2];
 
-static int checksum_sched_log()
+static int checksum_sched_log(void)
 {
 	int sum = 0, i;
 	for (i = 0; i < sizeof(gExcpTaskLog); i++)
@@ -143,7 +143,7 @@ static int checksum_sched_log()
 	return sum;
 }
 #else
-static int checksum_sched_log()
+static int checksum_sched_log(void)
 {
 	return 0;
 }
@@ -173,7 +173,7 @@ DEFINE_PER_CPU(struct sec_debug_mmu_reg_t, sec_debug_mmu_reg);
 DEFINE_PER_CPU(enum sec_debug_upload_cause_t, sec_debug_upload_cause);
 
 /* core reg dump function*/
-static void sec_debug_save_core_reg(struct sec_debug_core_t *core_reg)
+static inline void sec_debug_save_core_reg(struct sec_debug_core_t *core_reg)
 {
 	/* we will be in SVC mode when we enter this function. Collect
 	   SVC registers along with cmn registers. */
@@ -270,7 +270,7 @@ static void sec_debug_save_core_reg(struct sec_debug_core_t *core_reg)
 	return;
 }
 
-static void sec_debug_save_mmu_reg(struct sec_debug_mmu_reg_t *mmu_reg)
+static inline void sec_debug_save_mmu_reg(struct sec_debug_mmu_reg_t *mmu_reg)
 {
 	asm("mrc    p15, 0, r1, c1, c0, 0\n\t"	/* SCTLR */
 	    "str r1, [%0]\n\t"
@@ -310,7 +310,7 @@ static void sec_debug_save_mmu_reg(struct sec_debug_mmu_reg_t *mmu_reg)
 	);
 }
 
-static void sec_debug_save_context(void)
+static inline void sec_debug_save_context(void)
 {
 	unsigned long flags;
 	local_irq_save(flags);
@@ -353,7 +353,26 @@ static void sec_debug_set_upload_cause(enum sec_debug_upload_cause_t type)
 	pr_emerg("(%s) %x\n", __func__, type);
 }
 
-static void sec_debug_hw_reset(void)
+/*
+ * Called from dump_stack()
+ * This function call does not necessarily mean that a fatal error
+ * had occurred. It may be just a warning.
+ */
+static inline int sec_debug_dump_stack(void)
+{
+	if (!enable)
+		return -1;
+
+	sec_debug_save_context();
+
+	/* flush L1 from each core.
+	   L2 will be flushed later before reset. */
+	flush_cache_all();
+
+	return 0;
+}
+
+static inline void sec_debug_hw_reset(void)
 {
 	pr_emerg("(%s) %s\n", __func__, gkernel_sec_build_info);
 	pr_emerg("(%s) rebooting...\n", __func__);
@@ -396,25 +415,7 @@ static int sec_debug_panic_handler(struct notifier_block *nb,
 	return 0;
 }
 
-/*
- * Called from dump_stack()
- * This function call does not necessarily mean that a fatal error
- * had occurred. It may be just a warning.
- */
-int sec_debug_dump_stack(void)
-{
-	if (!enable)
-		return -1;
-
-	sec_debug_save_context();
-
-	/* flush L1 from each core.
-	   L2 will be flushed later before reset. */
-	flush_cache_all();
-
-	return 0;
-}
-
+#if !defined(CONFIG_TARGET_LOCALE_NA)
 void sec_debug_check_crash_key(unsigned int code, int value)
 {
 	static enum { NONE, HOME_DOWN } state = NONE;
@@ -446,6 +447,66 @@ void sec_debug_check_crash_key(unsigned int code, int value)
 	} else
 		state = NONE;
 }
+
+#else
+
+static struct hrtimer upload_start_timer;
+
+static enum hrtimer_restart force_upload_timer_func(struct hrtimer *timer)
+{
+	panic("Crash Key");
+
+	return HRTIMER_NORESTART;
+}
+
+/*  Volume UP + Volume Down = Force Upload Mode
+    1. check for VOL_UP and VOL_DOWN
+    2. if both key pressed start a timer with timeout period 3s
+    3. if any one of two keys is released before 3s disable timer. */
+void sec_debug_check_crash_key(unsigned int code, int value)
+{
+	static bool vol_up = 0, vol_down = 0, check = 0;
+
+	if (!enable)
+		return;
+
+	if ((code == KEY_VOLUMEUP) || (code == KEY_VOLUMEDOWN)) {
+		if (value) {
+			if (code == KEY_VOLUMEUP)
+				vol_up = true;
+
+			if (code == KEY_VOLUMEDOWN)
+				vol_down = true;
+
+			if (vol_up == true && vol_down == true) {
+				hrtimer_start(&upload_start_timer,
+					      ktime_set(3, 0),
+					      HRTIMER_MODE_REL);
+				check = true;
+			}
+		} else {
+			if (vol_up == true)
+				vol_up = false;
+			if (vol_down == true)
+				vol_down = false;
+			if (check) {
+				hrtimer_cancel(&upload_start_timer);
+				check = 0;
+			}
+		}
+	}
+}
+
+static void __init upload_timer_init()
+{
+        hrtimer_init(&upload_start_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+        upload_start_timer.function = force_upload_timer_func;
+}
+
+/* this should be initialized prior to keypad driver */
+early_initcall(upload_timer_init);
+
+#endif
 
 static struct notifier_block nb_reboot_block = {
 	.notifier_call = sec_debug_normal_reboot_handler

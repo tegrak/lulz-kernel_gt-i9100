@@ -22,9 +22,15 @@ EXTRA_CFLAGS += -DUSE_CID_CHECK
 ifdef CONFIG_TARGET_LOCALE_KOR
 EXTRA_CFLAGS += -DRDWR_MACADDR
 EXTRA_CFLAGS += -DROAM_ENABLE
-# EXTRA_CFLAGS += -DOKC_SUPPORT
+EXTRA_CFLAGS += -DOKC_SUPPORT
+else
+ifdef CONFIG_TARGET_LOCALE_NA
+EXTRA_CFLAGS += -DRDWR_MACADDR
+EXTRA_CFLAGS += -DUSE_HIDDEN_SSID
+EXTRA_CFLAGS += -DUSE_NA_HOTSPOT
 else
 EXTRA_CFLAGS += -DWRITE_MACADDR
+endif
 endif
 #EXTRA_CFLAGS += -DREAD_MACADDR
 
@@ -75,6 +81,14 @@ EXTRA_CFLAGS += -DROAM_API
 #2.4G only scan for the initial broad scan
 EXTRA_CFLAGS += -DUSE_INITIAL_2G_SCAN
 
+#MobileAP fw_reload
+EXTRA_CFLAGS += -DMOBILEAP_RELOAD
+
+ifeq ($(CONFIG_TARGET_LOCALE_NAATT),y)
+#Hidden SSID
+EXTRA_CFLAGS += -DUSE_HIDDEN_SSID
+endif
+
 
 ###############################################################################################
 
@@ -88,7 +102,6 @@ EXTRA_CFLAGS += -I$(src)/src/shared/
 EXTRA_LDFLAGS += --strip-debug
 
 KBUILD_CFLAGS += -I$(LINUXDIR)/include -I$(shell pwd)
-
 
 #obj-$(CONFIG_BROADCOM_WIFI)-m	+= dhd.o
 obj-m	+= dhd.o

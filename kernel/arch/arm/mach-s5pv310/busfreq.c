@@ -244,7 +244,7 @@ static unsigned int calc_bus_utilization(struct s5pv310_dmc_ppmu_hw *ppmu)
 		printk(KERN_ERR "%s: 0 value is not permitted\n", __func__);
 		return MAX_LOAD;
 	}
-	
+
 	return (ppmu->count[0] / DIVIDING_FACTOR * 100) /
 		(ppmu->ccnt / DIVIDING_FACTOR);
 }

@@ -109,7 +109,6 @@
 						S3C_CSIS_INTSRC_ERR_CRC | \
 						S3C_CSIS_INTSRC_ERR_ID)
 
-
 /* Resolution Register */
 #define S3C_CSIS_RESOL_HOR_SHIFT		(16)
 #define S3C_CSIS_RESOL_VER_SHIFT		(0)

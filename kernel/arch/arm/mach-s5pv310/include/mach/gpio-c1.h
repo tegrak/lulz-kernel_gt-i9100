@@ -11,6 +11,10 @@
 #include "gpio-talbot-rev02.h"
 #elif defined(CONFIG_MACH_C1_REV01)
 #include "gpio-c1-rev01.h"
+#elif defined(CONFIG_MACH_C1_NA_SPR_REV02)
+#include "gpio-c1-na-spr-rev02.h"
+#elif defined(CONFIG_MACH_C1_NA_SPR_REV05) || defined(CONFIG_MACH_C1_NA_SPR_EPIC2_REV00)
+#include "gpio-c1-na-spr-rev05.h"
 #else
 #include "gpio-c1-rev00.h"
 #endif

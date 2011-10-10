@@ -39,8 +39,9 @@ obj-$(CONFIG_APANIC)		+= apanic.o
 obj-$(CONFIG_SENSORS_AK8975)	+= ak8975.o
 obj-$(CONFIG_SENSORS_K3DH)	+= k3dh.o
 obj-$(CONFIG_USB_SWITCH_FSA9480)	+= fsa9480.o
+obj-$(CONFIG_USBHUB_USB3803)	+= usb3803.o
 obj-$(CONFIG_MUIC_MAX8997)	+= max8997-muic.o
 obj-$(CONFIG_CMA_DEVICE)	+= cma-dev.o
-
+obj-$(CONFIG_WIMAX_CMC)		+= max8893.o
 obj-$(CONFIG_PN544)		+= pn544.o
 obj-$(CONFIG_SEC_DEV_JACK)	+= sec_jack.o

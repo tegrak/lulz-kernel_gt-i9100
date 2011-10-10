@@ -354,6 +354,12 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
 		   -fno-delete-null-pointer-checks
+#change@wtl.kSingh - enabling FIPS mode - starts
+ifeq ($(USE_SEC_FIPS_MODE),true)
+KBUILD_CFLAGS += -DSEC_FIPS_ENABLED
+endif
+#change@wtl.kSingh - enabling FIPS mode - ends
+
 KBUILD_AFLAGS   := -D__ASSEMBLY__
 
 # Read KERNELRELEASE from include/config/kernel.release (if it exists)

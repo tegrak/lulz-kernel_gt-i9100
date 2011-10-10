@@ -2,33 +2,41 @@
 # Cryptographic API
 #
 
+ifeq ($(USE_SEC_FIPS_MODE),true)
+FIPS=fips_
+obj-$(CONFIG_CRYPTO_FIPS) += fips_integrity.o
+endif
+
 obj-$(CONFIG_CRYPTO) += crypto.o
-crypto-objs := api.o cipher.o compress.o
+crypto-objs := $(FIPS)api.o cipher.o compress.o
 
 obj-$(CONFIG_CRYPTO_WORKQUEUE) += crypto_wq.o
 
-obj-$(CONFIG_CRYPTO_FIPS) += fips.o
+obj-$(CONFIG_CRYPTO_FIPS) += $(FIPS)fips.o
 
-crypto_algapi-$(CONFIG_PROC_FS) += proc.o
-crypto_algapi-objs := algapi.o scatterwalk.o $(crypto_algapi-y)
+crypto_algapi-$(CONFIG_PROC_FS) += $(FIPS)proc.o
+crypto_algapi-objs := $(FIPS)algapi.o scatterwalk.o $(crypto_algapi-y)
+
 obj-$(CONFIG_CRYPTO_ALGAPI2) += crypto_algapi.o
 
 obj-$(CONFIG_CRYPTO_AEAD2) += aead.o
 
-crypto_blkcipher-objs := ablkcipher.o
-crypto_blkcipher-objs += blkcipher.o
+crypto_blkcipher-objs := $(FIPS)ablkcipher.o
+crypto_blkcipher-objs += $(FIPS)blkcipher.o
+
 obj-$(CONFIG_CRYPTO_BLKCIPHER2) += crypto_blkcipher.o
 obj-$(CONFIG_CRYPTO_BLKCIPHER2) += chainiv.o
 obj-$(CONFIG_CRYPTO_BLKCIPHER2) += eseqiv.o
 obj-$(CONFIG_CRYPTO_SEQIV) += seqiv.o
 
-crypto_hash-objs += ahash.o
-crypto_hash-objs += shash.o
+crypto_hash-objs += $(FIPS)ahash.o
+crypto_hash-objs += $(FIPS)shash.o
+
 obj-$(CONFIG_CRYPTO_HASH2) += crypto_hash.o
 
 obj-$(CONFIG_CRYPTO_PCOMP) += pcompress.o
 
-cryptomgr-objs := algboss.o testmgr.o
+cryptomgr-objs := algboss.o $(FIPS)testmgr.o
 
 obj-$(CONFIG_CRYPTO_MANAGER2) += cryptomgr.o
 obj-$(CONFIG_CRYPTO_HMAC) += hmac.o
@@ -82,8 +90,8 @@ obj-$(CONFIG_CRYPTO_AUTHENC) += authenc.o
 obj-$(CONFIG_CRYPTO_LZO) += lzo.o
 obj-$(CONFIG_CRYPTO_RNG2) += rng.o
 obj-$(CONFIG_CRYPTO_RNG2) += krng.o
-obj-$(CONFIG_CRYPTO_ANSI_CPRNG) += ansi_cprng.o
-obj-$(CONFIG_CRYPTO_TEST) += tcrypt.o
+obj-$(CONFIG_CRYPTO_ANSI_CPRNG) += $(FIPS)ansi_cprng.o
+obj-$(CONFIG_CRYPTO_TEST) += $(FIPS)tcrypt.o
 obj-$(CONFIG_CRYPTO_GHASH) += ghash-generic.o
 
 #

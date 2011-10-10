@@ -17,6 +17,10 @@
 #ifndef	__LINUX_USB_ANDROID_H
 #define	__LINUX_USB_ANDROID_H
 
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+#  define MAX_MULTI_CONFIGURATION	5
+#endif
+
 #include <linux/usb/composite.h>
 #include <linux/if_ether.h>
 
@@ -38,7 +42,9 @@ struct android_usb_product {
 	char **functions;
 #ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 /* soonyong.cho : Below variables are used for Samsung composite framework. */
-        __u8 bDeviceClass;
+	/* List of multi configuration functions */
+	char **multi_conf_functions[MAX_MULTI_CONFIGURATION];
+	__u8 bDeviceClass;
 	__u8 bDeviceSubClass;
 	__u8 bDeviceProtocol;
 	int  mode; /* if product id is same, you have to refer this mode value. */

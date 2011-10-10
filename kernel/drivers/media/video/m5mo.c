@@ -38,6 +38,7 @@
 
 #define M5MOTB_FW_PATH		"RS_M5LS_TB.bin"	/* TECHWIN - SONY */
 #define M5MOOB_FW_PATH		"RS_M5LS_OB.bin"	/* FIBEROPTICS - SONY */
+#define M5MOOE_FW_PATH		"RS_M5LS_OE.bin"	/* FIBEROPTICS - SONY */
 /*#define M5MOOC_FW_PATH		"RS_M5LS_OC.bin"*/	/* FIBEROPTICS - S.LSI */
 /*#define M5MOSB_FW_PATH		"RS_M5LS_SB.bin"*/	/* ELECTRO-MECHANICS - SONY */
 /*#define M5MOSC_FW_PATH		"RS_M5LS_SC.bin"*/	/* ELECTRO-MECHANICS - S.LSI */
@@ -542,7 +543,7 @@ static int m5mo_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	return err;
 }
 
-#ifdef CONFIG_TARGET_LOCALE_KOR
+#if defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_NA) || defined(CONFIG_TARGET_LOCALE_NAATT)
 static int m5mo_set_antibanding(struct v4l2_subdev *sd, int val)
 {
 	int antibanding = 0x02;	/* Fix 60Hz for domastic */
@@ -737,8 +738,13 @@ request_fw:
 
 		if (sensor_ver[0] == 'T' && sensor_ver[1] == 'B') {
 			err = request_firmware(&fw, M5MOTB_FW_PATH, dev);
+#if defined(CONFIG_TARGET_LOCALE_NA) //TEMP forcely use OE path for compatibility with old targets
+		} else if ((sensor_ver[0] == 'O' && sensor_ver[1] == 'B') || (sensor_ver[0] == 'O' && sensor_ver[1] == 'E')) {
+			err = request_firmware(&fw, M5MOOE_FW_PATH, dev);
+#else
 		} else if (sensor_ver[0] == 'O' && sensor_ver[1] == 'B') {
 			err = request_firmware(&fw, M5MOOB_FW_PATH, dev);
+#endif
 		} /*else if (sensor_ver[0] == 'O' && sensor_ver[1] == 'C') {
 			err = request_firmware(&fw, M5MOOC_FW_PATH, dev);
 		} else if (sensor_ver[0] == 'S' && sensor_ver[1] == 'B') {
@@ -911,9 +917,16 @@ retry:
 
 static int m5mo_set_iso(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
+	struct m5mo_state *state = to_state(sd);
 	struct v4l2_queryctrl qc = {0,};
 	int val = ctrl->value, err;
 	u32 iso[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05};
+
+	if (state->scene_mode != SCENE_MODE_NONE) {
+		/* sensor will set internally */
+		return 0;
+	}
+
 	cam_dbg("E, value %d\n", val);
 
 	qc.id = ctrl->id;
@@ -1098,13 +1111,10 @@ static int m5mo_set_scene_mode(struct v4l2_subdev *sd, int val)
 {
 	struct m5mo_state *state = to_state(sd);
 	struct v4l2_control ctrl;
-	int evp, iso, brightness, whitebalance, sharpness, saturation;
+	int evp, sharpness, saturation;
 	int err;
 	cam_dbg("E, value %d\n", val);
 
-	iso = ISO_AUTO;
-	brightness = EV_DEFAULT;
-	whitebalance = WHITE_BALANCE_AUTO;
 	sharpness = SHARPNESS_DEFAULT;
 	saturation = CONTRAST_DEFAULT;
 
@@ -1131,25 +1141,20 @@ retry:
 
 	case SCENE_MODE_PARTY_INDOOR:
 		evp = 0x04;
-		/*iso = ISO_200; sensor will set internally */
 		saturation = SATURATION_PLUS_1;
 		break;
 
 	case SCENE_MODE_BEACH_SNOW:
 		evp = 0x05;
-		/*iso = ISO_50; sensor will set internally */
-		brightness = EV_PLUS_2;
 		saturation = SATURATION_PLUS_1;
 		break;
 
 	case SCENE_MODE_SUNSET:
 		evp = 0x06;
-		whitebalance = WHITE_BALANCE_SUNNY;
 		break;
 
 	case SCENE_MODE_DUSK_DAWN:
 		evp = 0x07;
-		whitebalance = WHITE_BALANCE_FLUORESCENT;
 		break;
 
 	case SCENE_MODE_FALL_COLOR:
@@ -1167,7 +1172,6 @@ retry:
 
 	case SCENE_MODE_FIREWORKS:
 		evp = 0x0B;
-		/*iso = ISO_50; sensor will set internally */
 		break;
 
 	case SCENE_MODE_TEXT:
@@ -1177,7 +1181,6 @@ retry:
 
 	case SCENE_MODE_CANDLE_LIGHT:
 		evp = 0x0D;
-		whitebalance = WHITE_BALANCE_SUNNY;
 		break;
 
 	default:
@@ -1191,19 +1194,6 @@ retry:
 	CHECK_ERR(err);
 	err = m5mo_writeb(sd, M5MO_CATEGORY_AE, M5MO_AE_EP_MODE_CAP, evp);
 	CHECK_ERR(err);
-
-	/* ISO */
-	ctrl.id = V4L2_CID_CAMERA_ISO;
-	ctrl.value = iso;
-	m5mo_set_iso(sd, &ctrl);
-
-	/* EV Bias */
-	ctrl.id = V4L2_CID_CAMERA_BRIGHTNESS;
-	ctrl.value = brightness;
-	m5mo_set_exposure(sd, &ctrl);
-
-	/* AWB */
-	m5mo_set_whitebalance(sd, whitebalance);
 
 	/* Chroma Saturation */
 	ctrl.id = V4L2_CID_CAMERA_SATURATION;
@@ -1384,7 +1374,7 @@ static int m5mo_set_antishake(struct v4l2_subdev *sd, int val)
 	int ahs, err;
 
 	if (state->scene_mode != SCENE_MODE_NONE) {
-		cam_warn("should not be set with scene mode");
+		cam_warn("Should not be set with scene mode");
 		return 0;
 	}
 
@@ -1476,7 +1466,7 @@ static int m5mo_set_af(struct v4l2_subdev *sd, int val)
 				err = m5mo_readb(sd, M5MO_CATEGORY_LENS,
 					M5MO_LENS_AF_STATUS, &status);
 				CHECK_ERR(err);
-		
+
 				if (!(status & 0x01))
 					err = 0;
 			}
@@ -1768,10 +1758,10 @@ static int m5mo_start_capture(struct v4l2_subdev *sd, int val)
 	}
 
 	err = m5mo_readl(sd, M5MO_CATEGORY_CAPCTRL, M5MO_CAPCTRL_IMG_SIZE,
-				&state->jpeg.main_size);
+		&state->jpeg.main_size);
 	CHECK_ERR(err);
 	err = m5mo_readl(sd, M5MO_CATEGORY_CAPCTRL, M5MO_CAPCTRL_THUMB_SIZE,
-				&state->jpeg.thumb_size);
+		&state->jpeg.thumb_size);
 	CHECK_ERR(err);
 
 	state->jpeg.main_offset = 0;
@@ -1790,25 +1780,20 @@ static int m5mo_set_hdr(struct v4l2_subdev *sd, int val)
 	int err;
 	cam_trace("E\n");
 
-	switch (val) {
-	case 0:
-		err = m5mo_set_mode(sd, M5MO_MONITOR_MODE);
-		CHECK_ERR(err);
-		int_factor = m5mo_wait_interrupt(sd, M5MO_ISP_TIMEOUT);
-		if (!(int_factor & M5MO_INT_MODE)) {
-			cam_err("M5MO_INT_MODE isn't issued, %#x\n",
-				int_factor);
-			return -ETIMEDOUT;
-		}
-		break;
-	case 1:
-	case 2:
-		err = m5mo_writeb(sd, M5MO_CATEGORY_SYS,
-			M5MO_SYS_ROOT_EN, 0x01);
-		int_factor = m5mo_wait_interrupt(sd, M5MO_ISP_TIMEOUT);
-		break;
-	default:
-		cam_err("invalid HDR count\n");
+	err = m5mo_writeb(sd, M5MO_CATEGORY_CAPCTRL, M5MO_CAPCTRL_FRM_SEL, val + 1);
+	CHECK_ERR(err);
+
+	int_factor = m5mo_wait_interrupt(sd, M5MO_ISP_TIMEOUT);
+	if (!(int_factor & M5MO_INT_CAPTURE)) {
+		cam_warn("M5MO_INT_CAPTURE isn't issued on transfer, %#x\n", int_factor);
+		return -ETIMEDOUT;
+	}
+
+	err = m5mo_writeb(sd, M5MO_CATEGORY_CAPCTRL, M5MO_CAPCTRL_TRANSFER, 0x01);
+	int_factor = m5mo_wait_interrupt(sd, M5MO_ISP_TIMEOUT);
+	if (!(int_factor & M5MO_INT_CAPTURE)) {
+		cam_warn("M5MO_INT_CAPTURE isn't issued on transfer, %#x\n", int_factor);
+		return -ETIMEDOUT;
 	}
 
 	cam_trace("X\n");
@@ -1992,7 +1977,7 @@ static int m5mo_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 	default:
 		cam_err("no such control id %d, value %d\n",
-				ctrl->id - V4L2_CID_PRIVATE_BASE, ctrl->value);
+			ctrl->id - V4L2_CID_PRIVATE_BASE, ctrl->value);
 		/*err = -ENOIOCTLCMD;*/
 		err = 0;
 		break;
@@ -2000,7 +1985,7 @@ static int m5mo_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 	if (err < 0 && err != -ENOIOCTLCMD)
 		cam_err("failed, id %d, value %d\n",
-				ctrl->id - V4L2_CID_PRIVATE_BASE, ctrl->value);
+			ctrl->id - V4L2_CID_PRIVATE_BASE, ctrl->value);
 	return err;
 }
 
@@ -2196,8 +2181,13 @@ request_fw:
 
 		if (sensor_ver[0] == 'T' && sensor_ver[1] == 'B') {
 			err = request_firmware(&fw, M5MOTB_FW_PATH, dev);
+#if defined(CONFIG_TARGET_LOCALE_NA) //TEMP forcely use OE path for compatibility with old targets
+		} else if ((sensor_ver[0] == 'O' && sensor_ver[1] == 'B') || (sensor_ver[0] == 'O' && sensor_ver[1] == 'E')) {
+			err = request_firmware(&fw, M5MOOE_FW_PATH, dev);
+#else
 		} else if (sensor_ver[0] == 'O' && sensor_ver[1] == 'B') {
 			err = request_firmware(&fw, M5MOOB_FW_PATH, dev);
+#endif
 		} /*else if (sensor_ver[0] == 'O' && sensor_ver[1] == 'C') {
 			err = request_firmware(&fw, M5MOOC_FW_PATH, dev);
 		} else if (sensor_ver[0] == 'S' && sensor_ver[1] == 'B') {
@@ -2293,7 +2283,7 @@ static int m5mo_set_frmsize(struct v4l2_subdev *sd)
 	int err;
 	cam_trace("E\n");
 
-	if (state->format_mode != V4L2_PIX_FMT_MODE_CAPTURE) {
+	if (state->format_mode == V4L2_PIX_FMT_MODE_PREVIEW) {
 		err = m5mo_set_mode(sd, M5MO_PARMSET_MODE);
 		CHECK_ERR(err);
 
@@ -2339,13 +2329,13 @@ static int m5mo_s_fmt(struct v4l2_subdev *sd, struct v4l2_format *f)
 
 	state->format_mode = f->fmt.pix.priv;
 
-	frmsize = state->format_mode != V4L2_PIX_FMT_MODE_CAPTURE ?
+	frmsize = state->format_mode == V4L2_PIX_FMT_MODE_PREVIEW ?
 		&state->preview : &state->capture;
 
 	old_index = *frmsize ? (*frmsize)->index : -1;
 	*frmsize = NULL;
 
-	if (state->format_mode != V4L2_PIX_FMT_MODE_CAPTURE) {
+	if (state->format_mode == V4L2_PIX_FMT_MODE_PREVIEW) {
 		num_entries = ARRAY_SIZE(preview_frmsizes);
 		for (i = 0; i < num_entries; i++) {
 			if (width == preview_frmsizes[i].width &&
@@ -2367,7 +2357,7 @@ static int m5mo_s_fmt(struct v4l2_subdev *sd, struct v4l2_format *f)
 
 	if (*frmsize == NULL) {
 		cam_warn("invalid frame size %dx%d\n", width, height);
-		*frmsize = state->format_mode != V4L2_PIX_FMT_MODE_CAPTURE ?
+		*frmsize = state->format_mode == V4L2_PIX_FMT_MODE_PREVIEW ?
 			m5mo_get_frmsize(preview_frmsizes, num_entries,
 				M5MO_PREVIEW_VGA) :
 			m5mo_get_frmsize(capture_frmsizes, num_entries,
@@ -2435,7 +2425,7 @@ static int m5mo_enum_framesizes(struct v4l2_subdev *sd,
 	* In case of image capture,
 	* this returns the default camera resolution (VGA)
 	*/
-	if (state->format_mode != V4L2_PIX_FMT_MODE_CAPTURE) {
+	if (state->format_mode == V4L2_PIX_FMT_MODE_PREVIEW) {
 		if (state->preview == NULL || state->preview->index < 0)
 			return -EINVAL;
 
@@ -2518,29 +2508,58 @@ static int m5mo_s_stream_capture(struct v4l2_subdev *sd, int enable)
 
 static int m5mo_s_stream_hdr(struct v4l2_subdev *sd, int enable)
 {
-	int err;
+	struct m5mo_state *state = to_state(sd);
+	int int_en, int_factor, i, err;
 
-	err = m5mo_set_mode(sd, M5MO_PARMSET_MODE);
+	err = m5mo_writeb(sd, M5MO_CATEGORY_CAPCTRL,
+		M5MO_CAPCTRL_CAP_MODE, enable ? 0x06 : 0x00);
 	CHECK_ERR(err);
 
+	err = m5mo_writeb(sd, M5MO_CATEGORY_CAPPARM,
+		M5MO_CAPPARM_YUVOUT_MAIN, enable ? 0x00 : 0x21);
+	CHECK_ERR(err);
+
+	err = m5mo_readb(sd, M5MO_CATEGORY_SYS, M5MO_SYS_INT_EN, &int_en);
+	CHECK_ERR(err);
+
+	if (enable)
+		int_en |= M5MO_INT_FRAME_SYNC;
+	else
+		int_en &= ~M5MO_INT_FRAME_SYNC;
+
+	err = m5mo_writeb(sd, M5MO_CATEGORY_SYS, M5MO_SYS_INT_EN, int_en);
+		CHECK_ERR(err);
+
 	if (enable) {
-		err = m5mo_writeb(sd, M5MO_CATEGORY_TEST, 0x50, 0x02);
-		CHECK_ERR(err);
+		err = m5mo_set_mode(sd, M5MO_STILLCAP_MODE);
+		if (err <= 0) {
+			cam_err("failed to set mode\n");
+			return err;
+		}
 
-		err = m5mo_writeb(sd, M5MO_CATEGORY_TEST, 0x51, 0x80);
-		CHECK_ERR(err);
+		/* convert raw to jpeg by the image data processing and store memory on ISP
+		and receive preview jpeg image from ISP */
+		for (i = 0; i < 3; i++) {
+			int_factor = m5mo_wait_interrupt(sd, M5MO_ISP_TIMEOUT);
+			if (!(int_factor & M5MO_INT_FRAME_SYNC)) {
+				cam_err("M5MO_INT_FRAME_SYNC isn't issued, %#x\n",
+					int_factor);
+				return -ETIMEDOUT;
+			}
+		}
 
-		err = m5mo_writeb(sd, M5MO_CATEGORY_PARM,
-			M5MO_PARM_HDR_MON, 0x01);
-		CHECK_ERR(err);
+		/* stop ring-buffer */
+		if (!(state->isp.int_factor & M5MO_INT_CAPTURE)) {
+			/* FIXME - M5MO_INT_FRAME_SYNC interrupt should be issued just three times */
+			for (i = 0; i < 9; i++) {
+				int_factor = m5mo_wait_interrupt(sd, M5MO_ISP_TIMEOUT);
+				if (int_factor & M5MO_INT_CAPTURE)
+					break;
 
-		err = m5mo_writeb(sd, M5MO_CATEGORY_PARM,
-			M5MO_PARM_HDR_MON_OFFSET_EV, 0x64);
-		CHECK_ERR(err);
+				cam_err("M5MO_INT_CAPTURE isn't issued, %#x\n", int_factor);
+			}
+		}
 	} else {
-		err = m5mo_writeb(sd, M5MO_CATEGORY_PARM,
-			M5MO_PARM_HDR_MON, 0x00);
-		CHECK_ERR(err);
 	}
 	return 0;
 }
@@ -2646,13 +2665,21 @@ static int m5mo_init_param(struct v4l2_subdev *sd)
 		M5MO_CAPPARM_THUMB_JPEG_MAX, M5MO_THUMB_MAXSIZE);
 	CHECK_ERR(err);
 
+	/* Face detect */
 	err = m5mo_writeb(sd, M5MO_CATEGORY_FD, M5MO_FD_SIZE, 0x01);
 	CHECK_ERR(err);
 
 	err = m5mo_writeb(sd, M5MO_CATEGORY_FD, M5MO_FD_MAX, 0x0B);
 	CHECK_ERR(err);
 
-#ifdef CONFIG_TARGET_LOCALE_KOR
+	/* HDR */
+	err = m5mo_writeb(sd, M5MO_CATEGORY_CAPCTRL, M5MO_CAPCTRL_CAP_FRM_COUNT, 0x03);
+	CHECK_ERR(err);
+
+	err = m5mo_writeb(sd, M5MO_CATEGORY_AE, M5MO_AE_AUTO_BRACKET_EV, 0x64);
+	CHECK_ERR(err);
+
+#if defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_NA) || defined(CONFIG_TARGET_LOCALE_NAATT)
 	err = m5mo_set_antibanding(sd, 0x02);
 	CHECK_ERR(err);
 #endif
@@ -2665,8 +2692,6 @@ static int m5mo_init(struct v4l2_subdev *sd, u32 val)
 	struct m5mo_state *state = to_state(sd);
 	u32 int_factor;
 	int err;
-
-	wake_lock_timeout(&state->wake_lock, 2*HZ);
 
 	/* Default state values */
 	state->preview = NULL;
@@ -2745,6 +2770,16 @@ static int m5mo_s_config(struct v4l2_subdev *sd, int irq, void *platform_data)
 	return 0;
 }
 
+static int m5mo_s_power(struct v4l2_subdev *sd, int on)
+{
+	struct m5mo_state *state = to_state(sd);
+
+	if (on)
+		wake_lock_timeout(&state->wake_lock, 3*HZ);
+
+	return 0;
+}
+
 static const struct v4l2_subdev_core_ops m5mo_core_ops = {
 	.s_config = m5mo_s_config,	/* Fetch platform data */
 	.init = m5mo_init,		/* initializing API */
@@ -2753,6 +2788,7 @@ static const struct v4l2_subdev_core_ops m5mo_core_ops = {
 	.g_ctrl = m5mo_g_ctrl,
 	.s_ctrl = m5mo_s_ctrl,
 	.g_ext_ctrls = m5mo_g_ext_ctrls,
+	.s_power = m5mo_s_power,
 };
 
 static const struct v4l2_subdev_video_ops m5mo_video_ops = {
@@ -2776,7 +2812,7 @@ static ssize_t m5mo_camera_type_show(struct device *dev,
 	struct m5mo_state *state = to_state(sd);
 
 	char type[25];
-	
+
 	if (state->exif.unique_id[1] == 'B') {
 		strcpy(type, "SONY_IMX105PQ_M5MOLS");
 	} else if (state->exif.unique_id[1] == 'C') {

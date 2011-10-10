@@ -69,11 +69,14 @@ static int akm8975_ecs_set_mode(struct akm8975_data *akm, char mode)
 				AK8975_REG_CNTL, AK8975_MODE_SELF_TEST);
 		break;
 	default:
+		pr_err("%s: wrong mode(%d)\n", __func__, mode);
 		return -EINVAL;
 	}
 
-	if (ret < 0)
+	if (ret < 0) {
+		pr_err("%s : i2c write failed, mode = %d\n", __func__, mode);
 		return ret;
+	}
 
 	/* Wait at least 300us after changing mode. */
 	udelay(300);
@@ -221,6 +224,8 @@ static int akmd_ioctl(struct inode *inode, struct file *file, unsigned int cmd,
 						     rwbuf.raw[1],
 						     rwbuf.raw[0] - 1,
 						     &rwbuf.raw[2]);
+		if (ret < 0)
+			pr_err("%s: ECS_IOCTL_WRITE failed\n", __func__);
 		break;
 	case ECS_IOCTL_READ:
 		if ((rwbuf.raw[0] < 1) || (rwbuf.raw[0] > (RWBUF_SIZE - 1)))
@@ -230,8 +235,10 @@ static int akmd_ioctl(struct inode *inode, struct file *file, unsigned int cmd,
 						    rwbuf.raw[1],
 						    rwbuf.raw[0],
 						    &rwbuf.raw[1]);
-		if (ret < 0)
+		if (ret < 0) {
+			pr_err("%s: ECS_IOCTL_READ failed\n", __func__);
 			return ret;
+		}
 		if (copy_to_user(argp+1, rwbuf.raw+1, rwbuf.raw[0]))
 			return -EFAULT;
 		return 0;
@@ -259,6 +266,7 @@ static int akmd_ioctl(struct inode *inode, struct file *file, unsigned int cmd,
 		}
 		break;
 	default:
+		pr_err("%s: wrong cmd(%d)\n", __func__, cmd);
 		return -ENOTTY;
 	}
 
@@ -356,8 +364,11 @@ int akm8975_probe(struct i2c_client *client,
 	akm->this_client = client;
 
 	err = akm8975_ecs_set_mode_power_down(akm);
-	if (err < 0)
+	if (err < 0) {
+		pr_err("%s: akm8975_ecs_set_mode_power_down failed(%d)\n",
+							__func__, err);
 		goto exit_set_mode_power_down_failed;
+	}
 
 	err = akm8975_setup_irq(akm);
 	if (err) {
@@ -370,8 +381,10 @@ int akm8975_probe(struct i2c_client *client,
 	akm->akmd_device.fops = &akmd_fops;
 
 	err = misc_register(&akm->akmd_device);
-	if (err)
+	if (err) {
+		pr_err("%s misc_register failed\n", __func__);
 		goto exit_akmd_device_register_failed;
+	}
 
 	init_waitqueue_head(&akm->state_wq);
 

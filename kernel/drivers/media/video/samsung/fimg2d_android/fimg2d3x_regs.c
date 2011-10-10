@@ -134,10 +134,6 @@ u32 g2d_set_src_img(struct g2d_global *g2d_dev, g2d_rect * rect, g2d_flag * flag
 
 		data = ((rect->y + rect->h) << 16) | (rect->x + rect->w);
 		writel(data, g2d_dev->base + SRC_RIGHT_BOTTOM_REG);
-        
-		if (flag->potterduff_mode == G2D_Src_Mode) {
-			blt_cmd |= G2D_BLT_CMD_R_SRC_NON_PRE_BLEND_CONSTANT_ALPHA;
-		}
 	}
 
 	return blt_cmd;
@@ -318,7 +314,10 @@ u32 g2d_set_alpha(struct g2d_global *g2d_dev, g2d_flag * flag)
 
 	/* Alpha Value */
 	if(flag->alpha_val <= G2D_ALPHA_VALUE_MAX) {
-		blt_cmd |= G2D_BLT_CMD_R_ALPHA_BLEND_ALPHA_BLEND;
+		if (flag->potterduff_mode == G2D_Clear_Mode)
+			blt_cmd |= G2D_BLT_CMD_R_ALPHA_BLEND_NONE;
+		else
+			blt_cmd |= G2D_BLT_CMD_R_ALPHA_BLEND_ALPHA_BLEND;
 		writel((flag->alpha_val & 0xff), g2d_dev->base + ALPHA_REG);
 	} else {
 		blt_cmd |= G2D_BLT_CMD_R_ALPHA_BLEND_NONE;

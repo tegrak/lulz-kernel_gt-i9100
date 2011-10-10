@@ -1079,10 +1079,10 @@ static struct resource pmu_resource[] = {
 };
 
 static struct platform_device pmu_device = {
-	.name 		= "arm-pmu",
-	.id 		= ARM_PMU_DEVICE_CPU,
-	.resource 	= &pmu_resource,
-	.num_resources 	= 2,
+	.name		= "arm-pmu",
+	.id		= ARM_PMU_DEVICE_CPU,
+	.resource	= &pmu_resource,
+	.num_resources	= 2,
 };
 
 static struct platform_device *smdkv310_devices[] __initdata = {

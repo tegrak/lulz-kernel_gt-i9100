@@ -7738,7 +7738,7 @@ static const u32 s5k5bafx_capture[] =
 	0x0F12000B,
 };
 
-#ifdef CONFIG_TARGET_LOCALE_KOR
+#if defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_NAATT)
 static const u32 s5k5bafx_recording_60Hz_common[] = {
 	
 	/* recording 25fps Anti-Flicker 60Hz*/

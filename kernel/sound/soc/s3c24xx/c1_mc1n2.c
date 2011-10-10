@@ -234,13 +234,13 @@ static struct snd_soc_card c1_snd_card = {
 static struct mc1n2_setup c1_mc1n2_setup = {
 	{  /* MCDRV_INIT_INFO */
 		MCDRV_CKSEL_CMOS, /* bCkSel */
-		28,               /* bDivR0 20MHz*/ /* 28 for 24, 19 for 20 */
-		86,               /* bDivF0 20MHz*/ /* 86 for 24, 70 for 20 */
-		28,               /* bDivR1*/
-		86,               /* bDivF1*/
-		0,                /* bRange0*/
-		0,                /* bRange1*/
-		0,                /* bBypass*/
+		41,               /* bDivR0 */
+		126,              /* bDivF0 */
+		41,               /* bDivR1 */
+		126,              /* bDivF1 */
+		0,                /* bRange0 */
+		0,                /* bRange1 */
+		0,                /* bBypass */
 		MCDRV_DAHIZ_LOW,  /* bDioSdo0Hiz */
 		MCDRV_DAHIZ_LOW,  /* bDioSdo1Hiz */
 		MCDRV_DAHIZ_LOW,  /* bDioSdo2Hiz */

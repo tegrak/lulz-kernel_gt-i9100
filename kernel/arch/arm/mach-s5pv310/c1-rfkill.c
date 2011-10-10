@@ -245,7 +245,7 @@ static const struct rfkill_ops bt_rfkill_ops = {
 
 #ifdef BT_SLEEP_ENABLE
 static int bluetooth_set_sleep(void *data, enum rfkill_user_states state)
-{	
+{
 	switch (state) {
 
 		case RFKILL_USER_STATE_UNBLOCKED:
@@ -271,11 +271,11 @@ static int bluetooth_set_sleep(void *data, enum rfkill_user_states state)
 static int btsleep_rfkill_set_block(void *data, bool blocked)
 {
 	int ret =0;
-	
+
 	ret = bluetooth_set_sleep(data, blocked?
 			RFKILL_USER_STATE_SOFT_BLOCKED :
 			RFKILL_USER_STATE_UNBLOCKED);
-		
+
 	return ret;
 }
 
@@ -338,7 +338,7 @@ static int __init crespo_rfkill_probe(struct platform_device *pdev)
 	}
 
 	rfkill_set_sw_state(bt_rfk, 1);
-	bluetooth_set_power(NULL, RFKILL_USER_STATE_SOFT_BLOCKED);
+	//bluetooth_set_power(NULL, RFKILL_USER_STATE_SOFT_BLOCKED);
 
 #ifdef BT_SLEEP_ENABLE
 	wake_lock_init(&bt_wake_lock, WAKE_LOCK_SUSPEND, "bt_wake");
@@ -379,7 +379,7 @@ err_sleep_register:
 
 err_sleep_alloc:
 	gpio_free(GPIO_BT_WAKE);
-	
+
 err_req_gpio_bt_wake:
 	rfkill_unregister(bt_rfk);
 #endif

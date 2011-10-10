@@ -150,7 +150,7 @@ int WriteRDWR_Macaddr(struct ether_addr *mac)
 
 	if ((g_iMacFlag != MACADDR_COB) && (g_iMacFlag != MACADDR_MOD))
 		return 0;
-
+	
 	sprintf(buf,"%02X:%02X:%02X:%02X:%02X:%02X\n",
 			mac->octet[0],mac->octet[1],mac->octet[2],
 			mac->octet[3],mac->octet[4],mac->octet[5]);
@@ -175,7 +175,7 @@ int WriteRDWR_Macaddr(struct ether_addr *mac)
 		filp_close(fp_mac, NULL);
 	}
 
- 		return 0;
+	return 0;
 	
 }
 
@@ -389,7 +389,9 @@ int check_module_cid(dhd_pub_t *dhd)
 {
 	int ret = -1;
 	unsigned char cis_buf[128] = {0};
+	unsigned char cid_buf[10] = {0};
 	const char* cidfilepath = "/data/.cid.info";
+	int nread;
 
 	/* Try reading out from CIS */
 	cis_rw_t *cish = (cis_rw_t *)&cis_buf[8];
@@ -397,11 +399,15 @@ int check_module_cid(dhd_pub_t *dhd)
 
 	fp_cid = filp_open(cidfilepath, O_RDONLY, 0);
 	if (!IS_ERR(fp_cid)) { 
+		kernel_read(fp_cid, fp_cid->f_pos, &cid_buf, sizeof(cid_buf)); 
+		if(strstr(cid_buf,"samsung")||strstr(cid_buf,"murata")) {
 		/* file does exist, just return */
 		filp_close(fp_cid, NULL);
 		return 0;
 	}
 
+		DHD_ERROR(("[WIFI].cid.info file already exists but it contains an unknown id [%s]\n", cid_buf));
+	}
 	cish->source = 0;
 	cish->byteoff = 0;
 	cish->nbytes = sizeof(cis_buf);
@@ -471,12 +477,12 @@ startwrite:
 	ret = kernel_read(fp_mac, 0, buf, 18);
 
 	if((ret == 0) && (retry_count++ < 3)){
-  	filp_close(fp_mac, NULL);
-  	goto startwrite;
-  }	
+		filp_close(fp_mac, NULL);
+		goto startwrite;
+	}	
 	
-  filp_close(fp_mac, NULL);
-  
+	filp_close(fp_mac, NULL);
+
 	return 0;
 	
 }

@@ -29,15 +29,47 @@
 #include <plat/adc.h>
 #include <mach/sec_battery.h>
 
+#ifdef CONFIG_TARGET_LOCALE_NA
+#define POLLING_INTERVAL	(10 * 1000)
+#else
 #define POLLING_INTERVAL	(40 * 1000)
+#endif /* CONFIG_TARGET_LOCALE_NA */
+
 #ifdef SEC_BATTERY_INDEPEDENT_VF_CHECK
+#if defined(CONFIG_TARGET_LOCALE_NAATT)
+#define VF_CHECK_INTERVAL	(5 * 1000)
+
+#define	MAX_VF	1500
+#define	MIN_VF	1350
+#define	VF_COUNT	1
+#else
 #define VF_CHECK_INTERVAL	(10 * 1000)
 #endif
+#endif
 #define FULL_CHARGING_TIME	(6 * 60 *  60 * HZ)	/* 6hr */
+#ifdef CONFIG_TARGET_LOCALE_NA
+#define RECHARGING_TIME		(2 * 60 * 60 * HZ)	/* 2hr */
+#else
 #define RECHARGING_TIME		(90 * 60 * HZ)	/* 1.5hr */
+#endif
 #define RESETTING_CHG_TIME	(10 * 60 * HZ)	/* 10Min */
+#if defined(CONFIG_TARGET_LOCALE_NAATT)
+#define EVENT_OVER_TIME		(10 * 60 * HZ)	/* 10Min */
+#endif
+#ifdef CONFIG_TARGET_LOCALE_NA
+#define BAT_USE_TIMER_EXPIRE	( 10 * 60 * HZ)	 /* 10 min */
+#endif
 
+#ifdef CONFIG_TARGET_LOCALE_NA
+#define RECHARGING_VOLTAGE	(4130 * 1000)	/* 4.13 V */
+#else
 #define RECHARGING_VOLTAGE	(4150 * 1000)	/* 4.15 V */
+#endif
+
+#ifdef CONFIG_TARGET_LOCALE_NA
+#define RECHARGING_CND_COUNT    2
+#endif
+
 
 #define FG_T_SOC		0
 #define FG_T_VCELL		1
@@ -50,23 +82,84 @@
 #define ADC_CH_CHGCURRENT	1
 #define ADC_TOTAL_COUNT		5
 
-#define HIGH_BLOCK_TEMP			650
+#if defined(CONFIG_TARGET_LOCALE_NAATT)
+#define OFFSET_VIDEO_PLAY	(0x1 << 0)
+#define OFFSET_MP3_PLAY	(0x1 << 1)
+#define OFFSET_VOICE_CALL_2G	(0x1 << 2)
+#define OFFSET_VOICE_CALL_3G	(0x1 << 3)
+#define OFFSET_DATA_CALL	(0x1 << 4)
+#define OFFSET_WIFI	(0x1 << 5)
+#define OFFSET_GPS	(0x1 << 6)
+#define OFFSET_CAMERA_ON	(0x1 << 7)
+#endif
+
+/* put off current during charging*/
+#ifdef CONFIG_TARGET_LOCALE_NA
+#define USE_CALL			( 0x1 << 0)
+#define USE_VIDEO			( 0x1 << 1)
+#define USE_MUSIC			( 0x1 << 2)
+#define USE_BROWSER			( 0x1 << 3)
+#define USE_HOTSPOT			( 0x1 << 4)
+#define	USE_CAMERA			( 0x1 << 5)
+#define USE_DATA_CALL			( 0x1 << 6)
+#define USE_WIMAX			( 0x1 << 7)
+#endif
+
+#ifdef CONFIG_TARGET_LOCALE_NA
+#define EVENT_BLOCK_TEMP_ADC		750
+#define HIGH_BLOCK_TEMP_ADC            715
+#define LOW_BLOCK_TEMP_ADC             502
+#define HIGH_RECOVER_TEMP_ADC          690
+#define LOW_RECOVER_TEMP_ADC           510
+
+#define HIGH_BLOCK_TEMP_ADC_LPM        710
+#define LOW_BLOCK_TEMP_ADC_LPM         508
+#define HIGH_RECOVER_TEMP_ADC_LPM      702
+#define LOW_RECOVER_TEMP_ADC_LPM       514
+#elif defined(CONFIG_TARGET_LOCALE_NAATT)
+#define EVENT_BLOCK_TEMP			620
+#define HIGH_BLOCK_TEMP			490
 #define LOW_BLOCK_TEMP			(-30)
 
+#define EVENT_RECOVER_TEMP		420
+#define HIGH_RECOVER_TEMP		420
+#define LOW_RECOVER_TEMP		0
+#else
+#define HIGH_BLOCK_TEMP			650
+#define LOW_BLOCK_TEMP			(-30)
 #define HIGH_RECOVER_TEMP		430
 #define LOW_RECOVER_TEMP		0
+#endif
 
+#ifdef CONFIG_TARGET_LOCALE_NA
+#define CURRENT_OF_FULL_CHG			550
+#else
 #define CURRENT_OF_FULL_CHG			520
+#endif
+
 #define TEMP_BLOCK_COUNT			3
 #ifdef SEC_BATTERY_INDEPEDENT_VF_CHECK
 #define BAT_DET_COUNT				0
 #else
 #define BAT_DET_COUNT				1
 #endif
-#define FULL_CHG_COND_COUNT			3
-#define FULL_CHARGE_COND_VOLTAGE    (4150 * 1000)	/* 4.15 V */
 
+#ifdef CONFIG_TARGET_LOCALE_NA
+#define FULL_CHG_COND_COUNT			2
+#else
+#define FULL_CHG_COND_COUNT			3
+#endif
+
+#ifdef CONFIG_TARGET_LOCALE_NA
+#define FULL_CHARGE_COND_VOLTAGE    (4000 * 1000)       /* 4.00 V */
+#else
+#define FULL_CHARGE_COND_VOLTAGE    (4150 * 1000)	/* 4.15 V */
+#endif
 #define INIT_CHECK_COUNT	4
+
+#ifdef CONFIG_TARGET_LOCALE_NA
+#define SPRINT_SLATE_TEST
+#endif /* CONFIG_TARGET_LOCALE_NA */
 
 enum tmu_status_t {
 	TMU_STATUS_NORMAL = 0,
@@ -116,6 +209,9 @@ struct sec_bat_info {
 	struct sec_bat_adc_table_data *adc_table;
 	unsigned int adc_channel;
 	struct adc_sample temper_adc_sample;
+#if defined(CONFIG_TARGET_LOCALE_NAATT)
+	int vf_adc_channel;
+#endif
 
 	struct power_supply psy_bat;
 	struct power_supply psy_usb;
@@ -141,9 +237,31 @@ struct sec_bat_info {
 	int charging_status;
 	int charging_int_full_count;
 	int charging_adc_full_count;
+#ifdef CONFIG_TARGET_LOCALE_NA
+    int recharging_int_threshold_count;
+#endif
 
 	unsigned int batt_temp_adc;
+#ifdef CONFIG_TARGET_LOCALE_NA
+	unsigned int batt_temp_radc;
+#endif
 	unsigned int batt_current_adc;
+#if defined(CONFIG_TARGET_LOCALE_NAATT)
+	int batt_vf_adc;
+	int batt_event_status;
+	unsigned long event_end_time;
+#elif CONFIG_TARGET_LOCALE_NA
+	int use_call ;
+	int use_video ;
+	int use_music ;
+	int use_browser ;
+	int use_hotspot ;
+	int use_camera ;
+	int use_data_call ;
+	int use_wimax ;
+	int batt_event_status ;
+	unsigned long event_expired_time ;
+#endif
 	struct s3c_adc_client *padc;
 
 	struct workqueue_struct *monitor_wqueue;
@@ -156,6 +274,9 @@ struct sec_bat_info {
 	unsigned long charging_next_time;
 	unsigned int recharging_status;
 	unsigned int batt_lpm_state;
+#ifdef SPRINT_SLATE_TEST
+	bool slate_test_mode;
+#endif
 
 	struct mutex adclock;
 
@@ -215,7 +336,7 @@ static int calculate_average_adc(struct sec_bat_info *info,
 		for (i = 0; i < ADC_TOTAL_COUNT; i++)
 			sample->adc_arr[i] = adc;
 	} else {
-		sample->index = (++index >= ADC_TOTAL_COUNT) ? 0 : index;
+		sample->index = ++index >= ADC_TOTAL_COUNT ? 0 : index;
 		sample->adc_arr[sample->index] = adc;
 		for (i = 0; i < ADC_TOTAL_COUNT; i++)
 			total_adc += sample->adc_arr[i];
@@ -224,7 +345,7 @@ static int calculate_average_adc(struct sec_bat_info *info,
 	}
 
 	sample->average_adc = average_adc;
-	dev_info(info->dev, "%s: i(%d) adc=%d, avg_adc=%d\n", __func__,
+	dev_dbg(info->dev, "%s: i(%d) adc=%d, avg_adc=%d\n", __func__,
 		sample->index, adc, average_adc);
 
 	return average_adc;
@@ -505,6 +626,22 @@ err:
 	return err_value;
 }
 
+#ifdef CONFIG_TARGET_LOCALE_NA
+static inline int s3c_read_temper_adc(struct sec_bat_info *info)
+{
+	int adc;
+
+	mutex_lock(&info->adclock);
+	adc = sec_bat_get_adc_data(info, info->adc_channel);
+	mutex_unlock(&info->adclock);
+	if (adc <= 0)
+		adc = info->batt_temp_adc;
+
+	info->batt_temp_adc = calculate_average_adc(info, &info->temper_adc_sample, adc);
+
+	return info->batt_temp_adc;
+}
+#else
 static inline int s3c_read_temper_adc(struct sec_bat_info *info)
 {
 	int adc;
@@ -518,7 +655,395 @@ static inline int s3c_read_temper_adc(struct sec_bat_info *info)
 
 	return adc;
 }
+#endif
 
+#if defined(CONFIG_TARGET_LOCALE_NAATT)
+static int is_event_end_timer_running(struct sec_bat_info *info)
+{
+	unsigned long passed_time = 0;
+
+	if (info->event_end_time == 0xFFFFFFFF)	/*initial value*/
+		return false;
+
+	if (jiffies >= info->event_end_time)
+		passed_time = jiffies - info->event_end_time;
+	else
+		passed_time = 0xFFFFFFFF - info->event_end_time + jiffies;
+
+	if (time_after(passed_time, (unsigned long)EVENT_OVER_TIME)) {
+		info->event_end_time = 0xFFFFFFFF;
+		dev_info(info->dev,  "%s: Event timer is over 10 min\n",  __func__);
+		return false;
+	} else {
+		dev_info(info->dev,  "%s: Event timer is running(%u s)\n",
+		__func__, jiffies_to_msecs(passed_time) / 1000);
+		return true;
+	}
+
+	return false;
+}
+#endif
+
+#ifdef CONFIG_TARGET_LOCALE_NA
+
+static int is_event_end_timer_running(struct sec_bat_info *info)
+{
+	unsigned long passed_time = 0;
+
+	if (info->event_expired_time== 0xFFFFFFFF)	/*initial value*/
+		return false;
+
+	if (jiffies >= info->event_expired_time)
+		passed_time = jiffies - info->event_expired_time;
+	else
+		passed_time = 0xFFFFFFFF - info->event_expired_time + jiffies;
+
+	if (time_after(passed_time, (unsigned long)BAT_USE_TIMER_EXPIRE)) {
+		info->event_expired_time = 0xFFFFFFFF;
+		dev_info(info->dev,  "[SPR_NA] %s: Event timer is over 10 min\n",  __func__);
+		return false;
+	} else {
+		dev_info(info->dev,  "[SPR_NA] %s: Event timer is running(%u s)\n",
+		__func__, jiffies_to_msecs(passed_time) / 1000);
+		return true;
+	}
+
+	return false;
+}
+
+static unsigned long sec_rescale_temp_adc(struct sec_bat_info *info)
+{
+	int adc_tmp = info->batt_temp_adc;
+	int adc_tmp1 = 0;
+	int adc_tmp2 = 0;
+
+	adc_tmp1 = adc_tmp * 10;
+	adc_tmp2 = (40950 - adc_tmp1);
+	adc_tmp = adc_tmp2 / 50;
+	if ((adc_tmp2 % 10) >= 5)
+		adc_tmp += 1;
+
+	info->batt_temp_radc = adc_tmp;
+
+	printk("deb***: [battery] bat temper : %d, rescale : %d\n", info->batt_temp_adc, adc_tmp);
+
+	return adc_tmp;
+}
+#endif
+
+#ifdef CONFIG_TARGET_LOCALE_NA
+static int sec_bat_check_temper(struct sec_bat_info *info)
+{
+	struct power_supply *psy
+	    = power_supply_get_by_name(info->fuel_gauge_name);
+	union power_supply_propval value;
+	int ret;
+
+	int temp;
+	int temp_adc = s3c_read_temper_adc(info);
+	int temp_radc = sec_rescale_temp_adc(info);
+	int health = info->batt_health;
+	int low = 0;
+	int high = 0;
+	int mid = 0;
+
+	//calculate_average_adc(info, &info->temper_adc_sample, temp_adc);
+
+	if (!info->adc_table || !info->adc_arr_size) {
+		/* using fake temp */
+		temp = 300;
+		info->batt_temp = temp;
+		return temp;
+	}
+	high = info->adc_arr_size - 1;
+
+	while (low <= high) {
+		mid = (low + high) / 2;
+		if (info->adc_table[mid].adc > temp_adc)
+			high = mid - 1;
+		else if (info->adc_table[mid].adc < temp_adc)
+			low = mid + 1;
+		else
+			break;
+	}
+	temp = info->adc_table[mid].temperature;
+
+	info->batt_temp = temp;
+
+	dev_info(info->dev, "[test] temp_radc_value : %d \n",
+					__func__, temp_radc);
+
+	if (info->get_lpcharging_state) {
+		if (info->get_lpcharging_state()) {
+			if (temp_radc >= HIGH_BLOCK_TEMP_ADC_LPM) {
+				if (health != POWER_SUPPLY_HEALTH_OVERHEAT &&
+				health != POWER_SUPPLY_HEALTH_UNSPEC_FAILURE)
+				if (info->batt_temp_high_cnt < TEMP_BLOCK_COUNT)
+					info->batt_temp_high_cnt++;
+				dev_info(info->dev, "%s: high count = %d\n",
+				__func__, info->batt_temp_high_cnt);
+			} else if (temp_radc <= HIGH_RECOVER_TEMP_ADC_LPM && temp_radc >= LOW_RECOVER_TEMP_ADC_LPM) {
+				if (health == POWER_SUPPLY_HEALTH_OVERHEAT ||
+				health == POWER_SUPPLY_HEALTH_COLD){
+					info->batt_temp_high_cnt = 0;
+					info->batt_temp_low_cnt = 0;
+
+				if (info->batt_temp_recover_cnt < TEMP_BLOCK_COUNT)
+						info->batt_temp_recover_cnt++;
+					dev_info(info->dev, "%s: recovery count = %d\n",
+					__func__, info->batt_temp_recover_cnt);
+				}
+			} else if (temp_radc <= LOW_BLOCK_TEMP_ADC_LPM) {
+				if (health != POWER_SUPPLY_HEALTH_COLD &&
+				health != POWER_SUPPLY_HEALTH_UNSPEC_FAILURE)
+				if (info->batt_temp_low_cnt < TEMP_BLOCK_COUNT)
+					info->batt_temp_low_cnt++;
+				dev_info(info->dev, "%s: low count = %d\n",
+				__func__, info->batt_temp_low_cnt);
+			} else {
+				info->batt_temp_high_cnt = 0;
+				info->batt_temp_low_cnt = 0;
+				info->batt_temp_recover_cnt = 0;
+			}
+
+		} else {
+			if((info->batt_event_status) || (is_event_end_timer_running(info))){
+				dev_info(info->dev,  "[NA_SPR] Changed Put off Current",  __func__);
+				if (temp_radc >= EVENT_BLOCK_TEMP_ADC) {
+					if (health != POWER_SUPPLY_HEALTH_OVERHEAT &&
+					health != POWER_SUPPLY_HEALTH_UNSPEC_FAILURE)
+					if (info->batt_temp_high_cnt < TEMP_BLOCK_COUNT)
+						info->batt_temp_high_cnt++;
+					dev_info(info->dev, "%s: high count = %d\n",
+						__func__, info->batt_temp_high_cnt);
+				} else if (temp_radc <= HIGH_RECOVER_TEMP_ADC && temp_radc >= LOW_RECOVER_TEMP_ADC) {
+					if (health == POWER_SUPPLY_HEALTH_OVERHEAT ||
+					health == POWER_SUPPLY_HEALTH_COLD){
+
+						info->batt_temp_high_cnt = 0;
+						info->batt_temp_low_cnt = 0;
+
+					if (info->batt_temp_recover_cnt < TEMP_BLOCK_COUNT)
+							info->batt_temp_recover_cnt++;
+						dev_info(info->dev, "%s: recovery count = %d\n",
+							__func__, info->batt_temp_recover_cnt);
+					}
+				} else if (temp_radc <= LOW_BLOCK_TEMP_ADC) {
+					if (health != POWER_SUPPLY_HEALTH_COLD &&
+						health != POWER_SUPPLY_HEALTH_UNSPEC_FAILURE)
+					if (info->batt_temp_low_cnt < TEMP_BLOCK_COUNT)
+						info->batt_temp_low_cnt++;
+					dev_info(info->dev, "%s: low count = %d\n",
+						__func__, info->batt_temp_low_cnt);
+				} else {
+					info->batt_temp_high_cnt = 0;
+					info->batt_temp_low_cnt = 0;
+					info->batt_temp_recover_cnt = 0;
+				}
+				}else {
+					if (temp_radc >= HIGH_BLOCK_TEMP_ADC) {
+						if (health != POWER_SUPPLY_HEALTH_OVERHEAT &&
+						health != POWER_SUPPLY_HEALTH_UNSPEC_FAILURE)
+						if (info->batt_temp_high_cnt < TEMP_BLOCK_COUNT)
+							info->batt_temp_high_cnt++;
+						dev_info(info->dev, "%s: high count = %d\n",
+							__func__, info->batt_temp_high_cnt);
+						} else if (temp_radc <= HIGH_RECOVER_TEMP_ADC && temp_radc >= LOW_RECOVER_TEMP_ADC) {
+							if (health == POWER_SUPPLY_HEALTH_OVERHEAT ||
+							health == POWER_SUPPLY_HEALTH_COLD){
+
+								info->batt_temp_high_cnt = 0;
+								info->batt_temp_low_cnt = 0;
+
+							if (info->batt_temp_recover_cnt < TEMP_BLOCK_COUNT)
+									info->batt_temp_recover_cnt++;
+								dev_info(info->dev, "%s: recovery count = %d\n",
+									__func__, info->batt_temp_recover_cnt);
+							}
+						} else if (temp_radc <= LOW_BLOCK_TEMP_ADC) {
+							if (health != POWER_SUPPLY_HEALTH_COLD &&
+								health != POWER_SUPPLY_HEALTH_UNSPEC_FAILURE)
+							if (info->batt_temp_low_cnt < TEMP_BLOCK_COUNT)
+								info->batt_temp_low_cnt++;
+							dev_info(info->dev, "%s: low count = %d\n",
+								__func__, info->batt_temp_low_cnt);
+						} else {
+							info->batt_temp_high_cnt = 0;
+							info->batt_temp_low_cnt = 0;
+							info->batt_temp_recover_cnt = 0;
+						}
+					}
+
+		}
+	}
+	if (info->batt_temp_high_cnt >= TEMP_BLOCK_COUNT)
+		info->batt_health = POWER_SUPPLY_HEALTH_OVERHEAT;
+	else if (info->batt_temp_low_cnt >= TEMP_BLOCK_COUNT)
+		info->batt_health = POWER_SUPPLY_HEALTH_COLD;
+	else if (info->batt_temp_recover_cnt >= TEMP_BLOCK_COUNT)
+		info->batt_health = POWER_SUPPLY_HEALTH_GOOD;
+
+	/*else
+		info->batt_health = POWER_SUPPLY_HEALTH_GOOD;*/
+
+	/*else if (info->batt_temp_recover_cnt >= TEMP_BLOCK_COUNT)
+		info->batt_health = POWER_SUPPLY_HEALTH_GOOD;*/
+
+	/* Set temperature to fuel gauge */
+	if (info->fuel_gauge_name) {
+		value.intval = info->batt_temp / 10;
+		ret = psy->set_property(psy, POWER_SUPPLY_PROP_TEMP, &value);
+		if (ret) {
+			dev_err(info->dev, "%s: fail to set temperature(%d)\n",
+				__func__, ret);
+		}
+	}
+
+	dev_info(info->dev, "%s: temp=%d, adc=%d\n", __func__, temp, temp_adc);
+
+	return temp;
+}
+
+static int sec_bat_get_dcinovp(struct sec_bat_info *info)
+{
+	struct power_supply *psy = power_supply_get_by_name(info->charger_name);
+	union power_supply_propval value;
+
+	psy->get_property(psy, POWER_SUPPLY_PROP_STATUS, &value);
+
+	return value.intval;
+}
+
+#elif defined(CONFIG_TARGET_LOCALE_NAATT)
+static int sec_bat_check_temper(struct sec_bat_info *info)
+{
+	struct power_supply *psy
+	    = power_supply_get_by_name(info->fuel_gauge_name);
+	union power_supply_propval value;
+	int ret;
+
+	int temp;
+	int temp_adc = s3c_read_temper_adc(info);
+	int health = info->batt_health;
+	int low = 0;
+	int high = 0;
+	int mid = 0;
+
+	calculate_average_adc(info, &info->temper_adc_sample, temp_adc);
+
+	if (!info->adc_table || !info->adc_arr_size) {
+		/* using fake temp */
+		temp = 300;
+		info->batt_temp = temp;
+		return temp;
+	}
+	high = info->adc_arr_size - 1;
+
+	while (low <= high) {
+		mid = (low + high) / 2;
+		if (info->adc_table[mid].adc > temp_adc)
+			high = mid - 1;
+		else if (info->adc_table[mid].adc < temp_adc)
+			low = mid + 1;
+		else
+			break;
+	}
+	temp = info->adc_table[mid].temperature;
+
+	info->batt_temp = temp;
+
+
+	if ((info->batt_event_status) || (is_event_end_timer_running(info))) {
+		/*printk("[%s] event temp is applied\n", __func__);*/
+		if (temp >= EVENT_BLOCK_TEMP) {
+			if (health != POWER_SUPPLY_HEALTH_OVERHEAT &&
+				health != POWER_SUPPLY_HEALTH_UNSPEC_FAILURE)
+				if (info->batt_temp_high_cnt < TEMP_BLOCK_COUNT)
+					info->batt_temp_high_cnt++;
+				dev_info(info->dev, "%s: event high count = %d(in event)\n",
+					__func__, info->batt_temp_high_cnt);
+		} else if (temp <= EVENT_RECOVER_TEMP && temp >= LOW_RECOVER_TEMP) {
+			if (health == POWER_SUPPLY_HEALTH_OVERHEAT ||
+		    health == POWER_SUPPLY_HEALTH_COLD) {
+
+				info->batt_temp_high_cnt = 0;
+				info->batt_temp_low_cnt = 0;
+
+			if (info->batt_temp_recover_cnt < TEMP_BLOCK_COUNT)
+				info->batt_temp_recover_cnt++;
+			dev_info(info->dev, "%s: event recovery count = %d\n",
+				__func__, info->batt_temp_recover_cnt);
+			}
+		} else if (temp <= LOW_BLOCK_TEMP) {
+			if (health != POWER_SUPPLY_HEALTH_COLD &&
+				health != POWER_SUPPLY_HEALTH_UNSPEC_FAILURE)
+				if (info->batt_temp_low_cnt < TEMP_BLOCK_COUNT)
+					info->batt_temp_low_cnt++;
+				dev_info(info->dev, "%s: event low count = %d(in event)\n",
+					__func__, info->batt_temp_low_cnt);
+		} else {
+			info->batt_temp_high_cnt = 0;
+			info->batt_temp_low_cnt = 0;
+			info->batt_temp_recover_cnt = 0;
+		}
+	} else {
+		/*printk("[%s] nomal temp is applied\n", __func__);*/
+		if (temp >= HIGH_BLOCK_TEMP) {
+			if (health != POWER_SUPPLY_HEALTH_OVERHEAT &&
+			    health != POWER_SUPPLY_HEALTH_UNSPEC_FAILURE)
+				if (info->batt_temp_high_cnt < TEMP_BLOCK_COUNT)
+					info->batt_temp_high_cnt++;
+				dev_info(info->dev, "%s: high count = %d\n",
+					__func__, info->batt_temp_high_cnt);
+		} else if (temp <= HIGH_RECOVER_TEMP && temp >= LOW_RECOVER_TEMP) {
+			if (health == POWER_SUPPLY_HEALTH_OVERHEAT ||
+			    health == POWER_SUPPLY_HEALTH_COLD) {
+
+				info->batt_temp_high_cnt = 0;
+				info->batt_temp_low_cnt = 0;
+
+				if (info->batt_temp_recover_cnt < TEMP_BLOCK_COUNT)
+					info->batt_temp_recover_cnt++;
+				dev_info(info->dev, "%s: recovery count = %d\n",
+					__func__, info->batt_temp_recover_cnt);
+			}
+		} else if (temp <= LOW_BLOCK_TEMP) {
+			if (health != POWER_SUPPLY_HEALTH_COLD &&
+			    health != POWER_SUPPLY_HEALTH_UNSPEC_FAILURE)
+				if (info->batt_temp_low_cnt < TEMP_BLOCK_COUNT)
+					info->batt_temp_low_cnt++;
+				dev_info(info->dev, "%s: low count = %d\n",
+					__func__, info->batt_temp_low_cnt);
+		} else {
+			info->batt_temp_high_cnt = 0;
+			info->batt_temp_low_cnt = 0;
+			info->batt_temp_recover_cnt = 0;
+		}
+	}
+
+	if (info->batt_temp_high_cnt >= TEMP_BLOCK_COUNT)
+		info->batt_health = POWER_SUPPLY_HEALTH_OVERHEAT;
+	else if (info->batt_temp_low_cnt >= TEMP_BLOCK_COUNT)
+		info->batt_health = POWER_SUPPLY_HEALTH_COLD;
+	else if (info->batt_temp_recover_cnt >= TEMP_BLOCK_COUNT)
+		info->batt_health = POWER_SUPPLY_HEALTH_GOOD;
+
+	/* Set temperature to fuel gauge */
+	if (info->fuel_gauge_name) {
+		value.intval = info->batt_temp / 10;
+		ret = psy->set_property(psy, POWER_SUPPLY_PROP_TEMP, &value);
+		if (ret) {
+			dev_err(info->dev, "%s: fail to set temperature(%d)\n",
+				__func__, ret);
+		}
+	}
+
+	dev_info(info->dev, "%s: temp=%d, adc=%d\n", __func__, temp, temp_adc);
+
+	return temp;
+}
+
+#else
 static int sec_bat_check_temper(struct sec_bat_info *info)
 {
 	struct power_supply *psy
@@ -604,7 +1129,7 @@ static int sec_bat_check_temper(struct sec_bat_info *info)
 
 	return temp;
 }
-
+#endif
 static void check_chgcurrent(struct sec_bat_info *info)
 {
 	unsigned long chg_current_adc = 0;
@@ -616,7 +1141,7 @@ static void check_chgcurrent(struct sec_bat_info *info)
 		chg_current_adc = info->batt_current_adc;
 	info->batt_current_adc = chg_current_adc;
 
-	dev_info(info->dev,
+	dev_dbg(info->dev,
 		"[battery] charging current = %d\n", info->batt_current_adc);
 }
 
@@ -662,6 +1187,17 @@ static void sec_bat_update_info(struct sec_bat_info *info)
 	info->batt_soc = sec_bat_get_fuelgauge_data(info, FG_T_SOC);
 	info->batt_vcell = sec_bat_get_fuelgauge_data(info, FG_T_VCELL);
 	info->batt_vfocv = sec_bat_get_fuelgauge_data(info, FG_T_VFOCV);
+
+#ifdef SPRINT_SLATE_TEST
+	if (info->slate_test_mode) {
+		info->charging_status = POWER_SUPPLY_STATUS_DISCHARGING;
+		info->cable_type = CABLE_TYPE_NONE;
+	} else {
+	if (info->batt_full_status == BATT_NOT_FULL)
+		info->charging_status = sec_bat_get_dcinovp(info);
+}
+#endif
+
 }
 
 static int sec_bat_enable_charging_main(struct sec_bat_info *info, bool enable)
@@ -896,12 +1432,12 @@ static bool sec_bat_charging_time_management(struct sec_bat_info *info)
 			(unsigned long)RECHARGING_TIME) &&
 		    info->recharging_status == true) {
 			if (!sec_bat_enable_charging(info, false)) {
-				info->recharging_status = false;
+			info->recharging_status = false;
 				dev_info(info->dev,
-					"%s: Recharging timer expired\n",
-					__func__);
-				return true;
-			}
+					 "%s: Recharging timer expired\n",
+				 __func__);
+			return true;
+		}
 		}
 		break;
 	case POWER_SUPPLY_STATUS_CHARGING:
@@ -939,6 +1475,45 @@ static bool sec_bat_charging_time_management(struct sec_bat_info *info)
 
 	return false;
 }
+
+#if defined(CONFIG_TARGET_LOCALE_NAATT)
+static void sec_bat_check_vf_adc(struct sec_bat_info *info)
+{
+	int adc;
+	static int invalid_vf_count;
+
+	if (system_rev == 11)
+		return;
+
+	mutex_lock(&info->adclock);
+	adc = sec_bat_get_adc_data(info, info->vf_adc_channel);
+	mutex_unlock(&info->adclock);
+
+	if (adc <= 0)
+		adc = info->batt_vf_adc;
+
+	info->batt_vf_adc = adc;
+
+	if ((info->batt_vf_adc > MAX_VF || info->batt_vf_adc < MIN_VF)
+		&& ((info->cable_type == CABLE_TYPE_AC)
+		|| info->cable_type == CABLE_TYPE_USB)) {
+		invalid_vf_count++;
+
+		printk(KERN_DEBUG "[%s] invalid VF is detected... (vf = %d, count = %d)\n",
+			__func__, info->batt_vf_adc, invalid_vf_count);
+
+		if (invalid_vf_count >= VF_COUNT) {
+			printk(KERN_DEBUG "[%s] invalid VF is detected over %d times and now power off.\n", __func__, invalid_vf_count);
+			if (pm_power_off)
+				pm_power_off();
+		}
+	} else {
+		invalid_vf_count = 0;
+	}
+
+	return;
+}
+#endif
 
 static void sec_bat_check_vf(struct sec_bat_info *info)
 {
@@ -1006,7 +1581,7 @@ static bool sec_bat_check_ing_level_trigger(struct sec_bat_info *info)
 				break;
 			case POWER_SUPPLY_STATUS_NOT_CHARGING:
 				if (info->cable_type == CABLE_TYPE_USB ||
-						info->cable_type == CABLE_TYPE_MISC) {
+					info->cable_type == CABLE_TYPE_MISC) {
 					if (info->batt_vcell >=
 					    FULL_CHARGE_COND_VOLTAGE) {
 						/*USB full charged */
@@ -1019,24 +1594,25 @@ static bool sec_bat_check_ing_level_trigger(struct sec_bat_info *info)
 							    (info);
 							return true;
 						}
-						dev_info(info->dev,
-							"%s : full interrupt cnt = %d\n",
-							__func__,
-							info->charging_int_full_count);
+						dev_info(info->dev, "%s : full interrupt cnt = %d\n", __func__,
+						info->charging_int_full_count);
 					} else {
-						info->charging_int_full_count = 0;
-						/*reactivate charging in next monitor work
-						    for abnormal full-charged status */
+						info->charging_int_full_count =
+									0;
+						/*reactivate charging in*/
+						/*next monitor work*/
+						/*for abnormal*/
+						/*full-charged status*/
 						info->charging_next_time =
-							info->charging_passed_time + HZ;
+						info->charging_passed_time + HZ;
 					}
 				}
 				break;
 			}
 			break;
 		case POWER_SUPPLY_STATUS_NOT_CHARGING:
-			if (info->batt_health == POWER_SUPPLY_HEALTH_OVERVOLTAGE &&
-			    value.intval == POWER_SUPPLY_STATUS_NOT_CHARGING)
+			if (info->batt_health == POWER_SUPPLY_HEALTH_OVERVOLTAGE
+			&& value.intval == POWER_SUPPLY_STATUS_NOT_CHARGING)
 				info->batt_health = POWER_SUPPLY_HEALTH_GOOD;
 			break;
 		default:
@@ -1055,47 +1631,48 @@ static bool sec_bat_check_ing_level_trigger(struct sec_bat_info *info)
 			return false;
 		}
 
-		switch (info->charging_status) {
-		case POWER_SUPPLY_STATUS_FULL:
-			if (info->recharging_status == false)
-				break;
-		case POWER_SUPPLY_STATUS_CHARGING:
-			switch (value.intval) {
-			case POWER_SUPPLY_STATUS_DISCHARGING:
-				if (info->cable_type == CABLE_TYPE_USB ||
-						info->cable_type == CABLE_TYPE_MISC) {
-					if (info->batt_vcell >=
-						FULL_CHARGE_COND_VOLTAGE) {
-						/*USB full charged */
-						info->charging_int_full_count++;
-						if (info->charging_int_full_count >=
-							FULL_CHG_COND_COUNT) {
-							info->charging_int_full_count =
-								0;
-							sec_bat_handle_charger_topoff
-								(info);
-							return true;
-						}
-						dev_info(info->dev,
-							"%s : full interrupt cnt = %d\n",
-							__func__,
-							info->charging_int_full_count);
-					} else {
-						info->charging_int_full_count = 0;
-						/*reactivate charging in next monitor work
-							for abnormal full-charged status */
-						info->charging_next_time =
-							info->charging_passed_time + HZ;
+	switch (info->charging_status) {
+	case POWER_SUPPLY_STATUS_FULL:
+		if (info->recharging_status == false)
+			break;
+	case POWER_SUPPLY_STATUS_CHARGING:
+		switch (value.intval) {
+		case POWER_SUPPLY_STATUS_DISCHARGING:
+			if (info->cable_type == CABLE_TYPE_USB ||
+					info->cable_type == CABLE_TYPE_MISC) {
+				if (info->batt_vcell >=
+					FULL_CHARGE_COND_VOLTAGE) {
+					/*USB full charged */
+					info->charging_int_full_count++;
+					if (info->charging_int_full_count >=
+						FULL_CHG_COND_COUNT) {
+						info->charging_int_full_count =
+							0;
+						sec_bat_handle_charger_topoff
+							(info);
+						return true;
 					}
+					dev_info(info->dev,
+					"%s : full interrupt cnt = %d\n",
+					__func__,
+					info->charging_int_full_count);
+				} else {
+					info->charging_int_full_count = 0;
+					/*reactivate charging in*/
+					/*next monitor work*/
+					/*for abnormal full-charged status */
+					info->charging_next_time =
+						info->charging_passed_time + HZ;
 				}
-				break;
 			}
 			break;
-		default:
-			info->charging_int_full_count = 0;
-			break;
 		}
-		return false;
+		break;
+	default:
+		info->charging_int_full_count = 0;
+		break;
+	}
+	return false;
 	}
 }
 
@@ -1150,6 +1727,26 @@ static void sec_bat_monitor_work(struct work_struct *work)
 
 	switch (info->charging_status) {
 	case POWER_SUPPLY_STATUS_FULL:
+
+#ifdef CONFIG_TARGET_LOCALE_NA
+	if (info->batt_vcell < RECHARGING_VOLTAGE &&
+		info->recharging_status == false) {
+		info->recharging_int_threshold_count++;
+		if (info->recharging_int_threshold_count
+			>= RECHARGING_CND_COUNT) {
+			if (!sec_bat_enable_charging(info, true)) {
+				info->recharging_int_threshold_count = 0;
+				info->recharging_status = true;
+
+				dev_info(info->dev,
+				"%s: Start Recharging, Vcell = %d\n",
+				__func__, info->batt_vcell);
+			}
+		}
+	} else {
+		info->recharging_int_threshold_count = 0;
+	}
+#else
 		if (info->batt_vcell < RECHARGING_VOLTAGE &&
 		    info->recharging_status == false) {
 			if (!sec_bat_enable_charging(info, true)) {
@@ -1160,6 +1757,7 @@ static void sec_bat_monitor_work(struct work_struct *work)
 					 __func__, info->batt_vcell);
 			}
 		}
+	#endif
 		break;
 	case POWER_SUPPLY_STATUS_CHARGING:
 		switch (info->batt_health) {
@@ -1170,11 +1768,11 @@ static void sec_bat_monitor_work(struct work_struct *work)
 		case POWER_SUPPLY_HEALTH_UNSPEC_FAILURE:
 			if (!sec_bat_enable_charging(info, false)) {
 				info->charging_status =
-				    POWER_SUPPLY_STATUS_NOT_CHARGING;
+					POWER_SUPPLY_STATUS_NOT_CHARGING;
 				info->recharging_status = false;
 
 				dev_info(info->dev, "%s: Not charging\n",
-					__func__);
+					 __func__);
 			}
 			break;
 		default:
@@ -1190,8 +1788,8 @@ static void sec_bat_monitor_work(struct work_struct *work)
 				 __func__);
 			if (info->cable_type != CABLE_TYPE_NONE) {
 				if (!sec_bat_enable_charging(info, true))
-					info->charging_status
-					    = POWER_SUPPLY_STATUS_CHARGING;
+					info->charging_status =
+						POWER_SUPPLY_STATUS_CHARGING;
 			} else
 				info->charging_status
 				    = POWER_SUPPLY_STATUS_DISCHARGING;
@@ -1203,11 +1801,17 @@ static void sec_bat_monitor_work(struct work_struct *work)
 	}
 
 full_charged:
-	dev_info(info->dev,
-		"soc(%d), vfocv(%d), vcell(%d), temp(%d), charging(%d), health(%d)\n",
+#if defined(CONFIG_TARGET_LOCALE_NAATT)
+	dev_info(info->dev, "soc(%d), vfocv(%d), vcell(%d), temp(%d), charging(%d), health(%d), vf(%d)\n",
+		info->batt_soc, info->batt_vfocv,
+		info->batt_vcell / 1000, info->batt_temp / 10,
+		info->charging_status, info->batt_health, info->batt_vf_adc);
+#else
+	dev_info(info->dev, "soc(%d), vfocv(%d), vcell(%d), temp(%d), charging(%d), health(%d)\n",
 		info->batt_soc, info->batt_vfocv,
 		info->batt_vcell / 1000, info->batt_temp / 10,
 		info->charging_status, info->batt_health);
+#endif
 
 	power_supply_changed(&info->psy_bat);
 
@@ -1224,6 +1828,9 @@ static void sec_bat_vf_check_work(struct work_struct *work)
 
 	sec_bat_check_vf(info);
 
+#if defined(CONFIG_TARGET_LOCALE_NAATT)
+	sec_bat_check_vf_adc(info);
+#endif
 	if (info->batt_health == POWER_SUPPLY_HEALTH_UNSPEC_FAILURE) {
 		dev_info(info->dev, "%s: Battery Disconnected\n", __func__);
 
@@ -1267,6 +1874,9 @@ static struct device_attribute sec_battery_attrs[] = {
 	SEC_BATTERY_ATTR(batt_vfocv),
 	SEC_BATTERY_ATTR(batt_temp),
 	SEC_BATTERY_ATTR(batt_temp_adc),
+#ifdef CONFIG_TARGET_LOCALE_NA
+	SEC_BATTERY_ATTR(batt_temp_radc),
+#endif
 	SEC_BATTERY_ATTR(batt_temp_adc_avg),
 	SEC_BATTERY_ATTR(charging_source),
 	SEC_BATTERY_ATTR(batt_lp_charging),
@@ -1279,9 +1889,34 @@ static struct device_attribute sec_battery_attrs[] = {
 	SEC_BATTERY_ATTR(batt_test_value),
 	SEC_BATTERY_ATTR(batt_current_adc),
 	SEC_BATTERY_ATTR(system_rev),
+#ifdef CONFIG_TARGET_LOCALE_NA
+	SEC_BATTERY_ATTR(fg_soc),
+#else
 	SEC_BATTERY_ATTR(fg_psoc),
+#endif /* CONFIG_TARGET_LOCALE_NA */
 	SEC_BATTERY_ATTR(batt_lpm_state),
 	SEC_BATTERY_ATTR(batt_tmu_status),
+#ifdef SPRINT_SLATE_TEST
+	SEC_BATTERY_ATTR(slate_test_mode),
+#endif
+#if defined(CONFIG_TARGET_LOCALE_NAATT)
+	SEC_BATTERY_ATTR(batt_v_f_adc),
+	SEC_BATTERY_ATTR(talk_gsm),
+	SEC_BATTERY_ATTR(talk_wcdma),
+	SEC_BATTERY_ATTR(data_call),
+	SEC_BATTERY_ATTR(wifi),
+	SEC_BATTERY_ATTR(gps),
+	SEC_BATTERY_ATTR(camera),
+#elif CONFIG_TARGET_LOCALE_NA
+	SEC_BATTERY_ATTR(call),
+	//SEC_BATTERY_ATTR(video),
+	//SEC_BATTERY_ATTR(music),
+	SEC_BATTERY_ATTR(browser),
+	SEC_BATTERY_ATTR(hotspot),
+	SEC_BATTERY_ATTR(camera),
+	SEC_BATTERY_ATTR(data_call),
+	SEC_BATTERY_ATTR(wimax),
+#endif
 };
 
 enum {
@@ -1290,6 +1925,9 @@ enum {
 	BATT_VFOCV,
 	BATT_TEMP,
 	BATT_TEMP_ADC,
+#ifdef CONFIG_TARGET_LOCALE_NA
+	BATT_TEMP_RADC,
+#endif
 	BATT_TEMP_ADC_AVG,
 	CHARGING_SOURCE,
 	BATT_LP_CHARGING,
@@ -1305,7 +1943,82 @@ enum {
 	BATT_FG_PSOC,
 	BATT_LPM_STATE,
 	BATT_TMU_STATUS,
+#ifdef SPRINT_SLATE_TEST
+	SLATE_TEST_MODE,
+#endif
+#if defined(CONFIG_TARGET_LOCALE_NAATT)
+	BATT_V_F_ADC,
+	BATT_VOICE_CALL_2G,
+	BATT_VOICE_CALL_3G,
+	BATT_DATA_CALL,
+	BATT_WIFI,
+	BATT_GPS,
+	BATT_CAMERA,
+#endif
+#if CONFIG_TARGET_LOCALE_NA
+	BATT_CALL,
+	BATT_BROWSER,
+	BATT_HOTSOPT,
+	BATT_CAMERA,
+	BATT_DATA_CALL,
+	BATT_WIMAX,
+#endif
 };
+
+#if defined(CONFIG_TARGET_LOCALE_NAATT)
+static void sec_bat_check_event_status(
+		struct sec_bat_info *info, int mode, int offset)
+{
+	int is_event_running = 0;
+
+	if ((info->batt_event_status != 0)
+		/*&& (info->cable_type != CABLE_TYPE_NONE)*/)
+		is_event_running = 1;
+
+	if (mode) {
+		if (!(info->batt_event_status & offset))
+			info->batt_event_status |= offset;
+	} else {
+		if (info->batt_event_status & offset)
+			info->batt_event_status &= ~offset;
+	}
+
+	printk(KERN_DEBUG "[%s] current batt_event_status = 0x%x\n", __func__,
+			info->batt_event_status);
+
+	if ((info->batt_event_status == 0) && (is_event_running == 1))
+		info->event_end_time = jiffies;
+
+	return ;
+}
+#elif CONFIG_TARGET_LOCALE_NA
+static void sec_bat_check_event_status(
+		struct sec_bat_info *info, int mode, int offset)
+{
+	int is_event_running = 0;
+
+	if ((info->batt_event_status != 0)
+		/*&& (info->cable_type != CABLE_TYPE_NONE)*/)
+		is_event_running = 1;
+
+	if (mode) {
+		if (!(info->batt_event_status & offset))
+			info->batt_event_status |= offset;
+	} else {
+		if (info->batt_event_status & offset)
+			info->batt_event_status &= ~offset;
+	}
+
+	printk(KERN_DEBUG "[%s] current batt_event_status = 0x%x\n", __func__,
+			info->batt_event_status);
+
+	if ((info->batt_event_status == 0) && (is_event_running == 1))
+		info->event_expired_time = jiffies;
+
+	return ;
+}
+
+#endif
 
 static ssize_t sec_bat_show_property(struct device *dev,
 				     struct device_attribute *attr, char *buf)
@@ -1334,6 +2047,14 @@ static ssize_t sec_bat_show_property(struct device *dev,
 		val = s3c_read_temper_adc(info);
 		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", val);
 		break;
+#ifdef CONFIG_TARGET_LOCALE_NA
+	case BATT_TEMP_RADC:
+		val = s3c_read_temper_adc(info);
+		val = sec_rescale_temp_adc(info);
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n",
+				info->batt_temp_radc);
+		break;
+#endif
 	case BATT_TEMP_ADC_AVG:
 		val = info->temper_adc_sample.average_adc;
 		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", val);
@@ -1348,11 +2069,19 @@ static ssize_t sec_bat_show_property(struct device *dev,
 		break;
 	case BATT_VIDEO:
 		/* TODO */
+#ifdef CONFIG_TARGET_LOCALE_NA
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", info->use_video);
+#else
 		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", 0);
+#endif
 		break;
 	case BATT_MP3:
 		/* TODO */
+#ifdef CONFIG_TARGET_LOCALE_NA
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", info->use_music);
+#else
 		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", 0);
+#endif
 		break;
 	case BATT_TYPE:
 		i += scnprintf(buf + i, PAGE_SIZE - i, "%s\n", "SDI_SDI");
@@ -1368,14 +2097,20 @@ static ssize_t sec_bat_show_property(struct device *dev,
 			"%d\n", info->batt_health);
 		break;
 	case BATT_TEMP_ADC_SPEC:
+#ifdef CONFIG_TARGET_LOCALE_NA
+		i += scnprintf(buf + i, PAGE_SIZE - i,
+			"(HIGH: %d - %d,   LOW: %d - %d)\n",
+			       HIGH_BLOCK_TEMP_ADC , HIGH_RECOVER_TEMP_ADC ,
+			       LOW_BLOCK_TEMP_ADC , LOW_RECOVER_TEMP_ADC);
+#else
 		i += scnprintf(buf + i, PAGE_SIZE - i,
 			"(HIGH: %d - %d,   LOW: %d - %d)\n",
 			       HIGH_BLOCK_TEMP / 10, HIGH_RECOVER_TEMP / 10,
 			       LOW_BLOCK_TEMP / 10, LOW_RECOVER_TEMP / 10);
+#endif
 		break;
 	case BATT_TEST_VALUE:
-		i += scnprintf(buf + i, PAGE_SIZE - i,
-			"0-normal, 1-full, 2-low, 3-high, 4-over, 5-cf, 6-trip (%d)\n",
+		i += scnprintf(buf + i, PAGE_SIZE - i, "0-normal, 1-full, 2-low, 3-high, 4-over, 5-cf, 6-trip (%d)\n",
 			info->test_value);
 		break;
 	case BATT_CURRENT_ADC:
@@ -1397,6 +2132,62 @@ static ssize_t sec_bat_show_property(struct device *dev,
 		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n",
 			info->batt_tmu_status);
 		break;
+#ifdef SPRINT_SLATE_TEST
+	case SLATE_TEST_MODE:
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n",
+		info->slate_test_mode);
+		break;
+#endif
+#if defined(CONFIG_TARGET_LOCALE_NAATT)
+	case BATT_V_F_ADC:
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n",
+				info->batt_vf_adc);
+		break;
+	case BATT_VOICE_CALL_2G:
+		/* TODO */
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", 0);
+		break;
+	case BATT_VOICE_CALL_3G:
+		/* TODO */
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", 0);
+		break;
+	case BATT_DATA_CALL:
+		/* TODO */
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", 0);
+		break;
+	case BATT_WIFI:
+		/* TODO */
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", 0);
+		break;
+	case BATT_GPS:
+		/* TODO */
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", 0);
+		break;
+	case BATT_CAMERA:
+		/* TODO */
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", 0);
+		break;
+#endif
+#ifdef CONFIG_TARGET_LOCALE_NA
+	case BATT_CALL:
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", info->use_call);
+		break;
+	case BATT_BROWSER:
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", info->use_browser);
+		break;
+	case BATT_HOTSOPT:
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", info->use_hotspot);
+		break;
+	case BATT_CAMERA:
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", info->use_camera);
+		break;
+	case BATT_DATA_CALL:
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", info->use_data_call);
+		break;
+	case BATT_WIMAX:
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", info->use_wimax);
+		break;
+#endif
 	default:
 		i = -EINVAL;
 		break;
@@ -1419,6 +2210,12 @@ static ssize_t sec_bat_store(struct device *dev,
 		if (sscanf(buf, "%d\n", &x) == 1) {
 			dev_info(info->dev, "%s: video(%d)\n", __func__, x);
 			ret = count;
+#if defined(CONFIG_TARGET_LOCALE_NAATT)
+			sec_bat_check_event_status(info, x, OFFSET_VIDEO_PLAY);
+#elif CONFIG_TARGET_LOCALE_NA
+			info->use_video = x;
+			sec_bat_check_event_status(info, x,	USE_VIDEO);
+#endif
 		}
 		break;
 	case BATT_MP3:
@@ -1426,13 +2223,19 @@ static ssize_t sec_bat_store(struct device *dev,
 		if (sscanf(buf, "%d\n", &x) == 1) {
 			dev_info(info->dev, "%s: mp3(%d)\n", __func__, x);
 			ret = count;
+#if defined(CONFIG_TARGET_LOCALE_NAATT)
+			sec_bat_check_event_status(info, x, OFFSET_MP3_PLAY);
+#elif CONFIG_TARGET_LOCALE_NA
+			info->use_music = x;
+			sec_bat_check_event_status(info, x,	USE_MUSIC);
+#endif
 		}
 		break;
 	case BATT_TEST_VALUE:
 		if (sscanf(buf, "%d\n", &x) == 1) {
 			info->test_value = x;
-			dev_info(info->dev, "%s : test case : %d\n",
-				__func__, info->test_value);
+			printk(KERN_DEBUG "%s : test case : %d\n", __func__,
+				info->test_value);
 			ret = count;
 		}
 		break;
@@ -1442,6 +2245,124 @@ static ssize_t sec_bat_store(struct device *dev,
 			ret = count;
 		}
 		break;
+#ifdef SPRINT_SLATE_TEST
+	case SLATE_TEST_MODE:
+		if (strncmp(buf, "1", 1) == 0) {
+			info->slate_test_mode = true;
+			ret = count;
+		} else {
+			info->slate_test_mode = false;
+			ret = count;
+		}
+		break;
+#endif
+#if defined(CONFIG_TARGET_LOCALE_NAATT)
+	case BATT_VOICE_CALL_2G:
+		/* TODO */
+		if (sscanf(buf, "%d\n", &x) == 1) {
+			dev_info(info->dev, "%s: call 2G(%d)\n", __func__, x);
+			ret = count;
+			sec_bat_check_event_status(info, x,
+							OFFSET_VOICE_CALL_2G);
+		}
+		break;
+	case BATT_VOICE_CALL_3G:
+		/* TODO */
+		if (sscanf(buf, "%d\n", &x) == 1) {
+			dev_info(info->dev, "%s: call 3G(%d)\n", __func__, x);
+			ret = count;
+			sec_bat_check_event_status(info, x,
+							OFFSET_VOICE_CALL_3G);
+		}
+		break;
+	case BATT_DATA_CALL:
+		/* TODO */
+		if (sscanf(buf, "%d\n", &x) == 1) {
+			dev_info(info->dev, "%s: data call(%d)\n", __func__, x);
+			ret = count;
+			sec_bat_check_event_status(info, x, OFFSET_DATA_CALL);
+		}
+		break;
+	case BATT_WIFI:
+		/* TODO */
+		if (sscanf(buf, "%d\n", &x) == 1) {
+			dev_info(info->dev, "%s: wifi(%d)\n", __func__, x);
+			ret = count;
+			sec_bat_check_event_status(info, x, OFFSET_WIFI);
+		}
+		break;
+	case BATT_GPS:
+		/* TODO */
+		if (sscanf(buf, "%d\n", &x) == 1) {
+			dev_info(info->dev, "%s: gps(%d)\n", __func__, x);
+			ret = count;
+			sec_bat_check_event_status(info, x, OFFSET_GPS);
+		}
+		break;
+	case BATT_CAMERA:
+		/* TODO */
+		if (sscanf(buf, "%d\n", &x) == 1) {
+			dev_info(info->dev, "%s: camera(%d)\n", __func__, x);
+			ret = count;
+			sec_bat_check_event_status(info, x, OFFSET_CAMERA_ON);
+		}
+		break;
+#endif
+#ifdef CONFIG_TARGET_LOCALE_NA
+	case BATT_CALL:
+		/* TODO */
+		if (sscanf(buf, "%d\n", &x) == 1) {
+			info->use_call = x ;
+			dev_info(info->dev, "[NA_SPR]%s: call (%d)\n", __func__, x);
+			ret = count;
+			sec_bat_check_event_status(info, x, USE_CALL);
+		}
+		break;
+	case BATT_BROWSER:
+		/* TODO */
+		if (sscanf(buf, "%d\n", &x) == 1) {
+			info->use_browser = x ;
+			dev_info(info->dev, "[NA_SPR]%s: BROWSER(%d)\n", __func__, x);
+			ret = count;
+			sec_bat_check_event_status(info, x, USE_BROWSER);
+		}
+		break;
+	case BATT_HOTSOPT:
+		/* TODO */
+		if (sscanf(buf, "%d\n", &x) == 1) {
+			info->use_hotspot = x;
+			dev_info(info->dev, "[NA_SPR]%s: HOTSPOT(%d)\n", __func__, x);
+			ret = count;
+			sec_bat_check_event_status(info, x, USE_HOTSPOT);
+		}
+		break;
+	case BATT_CAMERA:
+		/* TODO */
+		if (sscanf(buf, "%d\n", &x) == 1) {
+			dev_info(info->dev, "[NA_SPR]%s: CAMERA(%d)\n", __func__, x);
+			ret = count;
+			sec_bat_check_event_status(info, x, USE_CAMERA);
+		}
+		break;
+	case BATT_DATA_CALL:
+		/* TODO */
+		if (sscanf(buf, "%d\n", &x) == 1) {
+			info->use_data_call =x ;
+			dev_info(info->dev, "[NA_SPR]%s: DATA CALL(%d)\n", __func__, x);
+			ret = count;
+			sec_bat_check_event_status(info, x, USE_DATA_CALL);
+		}
+		break;
+	case BATT_WIMAX:
+		/* TODO */
+		if (sscanf(buf, "%d\n", &x) == 1) {
+			info->use_wimax =x;
+			dev_info(info->dev, "[NA_SPR]%s: WIMAX(%d)\n", __func__, x);
+			ret = count;
+			sec_bat_check_event_status(info, x, USE_WIMAX);
+		}
+		break;
+#endif
 	default:
 		ret = -EINVAL;
 	}
@@ -1499,6 +2420,33 @@ static int sec_bat_read_proc(char *buf, char **start,
 	ktime = alarm_get_elapsed_realtime();
 	cur_time = ktime_to_timespec(ktime);
 
+#ifdef CONFIG_TARGET_LOCALE_NA
+
+	len = sprintf(buf, "%lu, %u, %u, %u, %u, %u, %d, %d, %d, \
+%u, %u, %u, %u, %u, %u, %u, %d, %lu\n",
+		cur_time.tv_sec,
+		info->batt_raw_soc,
+		info->batt_soc,
+		info->batt_vfocv,
+		info->batt_vcell,
+		info->batt_current_adc,
+		info->batt_full_status,
+		info->charging_int_full_count,
+		info->charging_adc_full_count,
+		info->recharging_status,
+		info->batt_temp_adc,
+		info->batt_temp_radc,
+		info->batt_health,
+		info->charging_status,
+		info->batt_tmu_status,
+		info->present,
+		info->cable_type,
+		info->charging_passed_time);
+
+    return len;
+}
+
+#else
 	len = sprintf(buf, "%lu, %u, %u, %u, %u, %u, %d, %d, %d, \
 %u, %u, %u, %u, %u, %u, %d, %lu\n",
 		cur_time.tv_sec,
@@ -1521,6 +2469,10 @@ static int sec_bat_read_proc(char *buf, char **start,
 
     return len;
 }
+
+
+
+#endif
 
 static __devinit int sec_bat_probe(struct platform_device *pdev)
 {
@@ -1560,7 +2512,9 @@ static __devinit int sec_bat_probe(struct platform_device *pdev)
 		info->adc_channel = pdata->adc_channel;
 		info->use_sub_charger = false;
 	}
-
+#if defined(CONFIG_TARGET_LOCALE_NAATT)
+	info->vf_adc_channel = pdata->adc_vf_channel;
+#endif
 	info->get_lpcharging_state = pdata->get_lpcharging_state;
 
 	info->psy_bat.name = "battery",
@@ -1620,6 +2574,9 @@ static __devinit int sec_bat_probe(struct platform_device *pdev)
 	info->present_count = 0;
 	info->charging_int_full_count = 0;
 	info->charging_adc_full_count = 0;
+#ifdef CONFIG_TARGET_LOCALE_NA
+	info->recharging_int_threshold_count = 0;
+#endif
 	info->batt_temp_high_cnt = 0;
 	info->batt_temp_low_cnt = 0;
 	info->batt_temp_recover_cnt = 0;
@@ -1631,6 +2588,22 @@ static __devinit int sec_bat_probe(struct platform_device *pdev)
 	info->padc = s3c_adc_register(pdev, NULL, NULL, 0);
 	info->charging_start_time = 0;
 
+#if defined(CONFIG_TARGET_LOCALE_NAATT)
+	info->batt_vf_adc = 0;
+	info->batt_event_status = 0;
+	info->event_end_time = 0xFFFFFFFF;
+#elif CONFIG_TARGET_LOCALE_NA
+	info->use_call = 0;
+	info->use_video =0 ;
+	info->use_music =0;
+	info->use_browser =0;
+	info->use_hotspot =0;
+	info->use_camera =0;
+	info->use_data_call =0;
+	info->use_wimax =0;
+	info->batt_event_status = 0;
+	info->event_expired_time = 0xFFFFFFFF;
+#endif
 	if (info->get_lpcharging_state) {
 		if (info->get_lpcharging_state())
 			info->polling_interval = POLLING_INTERVAL / 4;

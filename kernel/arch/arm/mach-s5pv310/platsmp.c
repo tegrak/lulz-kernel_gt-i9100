@@ -260,4 +260,3 @@ void __init smp_prepare_cpus(unsigned int max_cpus)
 		}
 	}
 }
-

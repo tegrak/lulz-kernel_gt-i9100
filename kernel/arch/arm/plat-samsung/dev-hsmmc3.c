@@ -43,6 +43,7 @@ static u64 s3c_device_hsmmc3_dmamask = 0xffffffffUL;
 
 struct s3c_sdhci_platdata s3c_hsmmc3_def_platdata = {
 	.max_width	= 4,
+	.enable_intr_on_resume	= 1,		
 	.host_caps	= (MMC_CAP_4_BIT_DATA |
 #if defined(CONFIG_MMC_CH3_CLOCK_GATING)
 			MMC_CAP_CLOCK_GATING |
@@ -82,4 +83,7 @@ void s3c_sdhci3_set_platdata(struct s3c_sdhci_platdata *pd)
 		set->cfg_card = pd->cfg_card;
 	if (pd->host_caps)
 		set->host_caps |= pd->host_caps;
+       if (pd->enable_intr_on_resume)
+               set->enable_intr_on_resume = pd->enable_intr_on_resume;
+
 }

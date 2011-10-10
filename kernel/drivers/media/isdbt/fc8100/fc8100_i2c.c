@@ -112,7 +112,11 @@ static int i2c_bb_read(HANDLE hDevice, u16 addr, u8 *data, u16 length)
 	rmsg[1].buf = data;
 	res = i2c_transfer(fc8100_i2c->adapter, &rmsg[0], 2);
 
-	return 0;
+	/* return status */
+	if (res >= 0)
+		res = 0;
+
+	return res;
 }
 
 static int i2c_bb_write(HANDLE hDevice, u16 addr, u8 *data, u16 length)
@@ -135,7 +139,11 @@ static int i2c_bb_write(HANDLE hDevice, u16 addr, u8 *data, u16 length)
 
 	res = i2c_transfer(fc8100_i2c->adapter, &wmsg, 1);
 
-	return 0;
+	/* return status */
+	if (res >= 0)
+		res = 0;
+
+	return res;
 }
 
 static int i2c_rf_read(HANDLE hDevice, u8 addr, u8 *data, u8 length)
@@ -166,7 +174,12 @@ static int i2c_rf_read(HANDLE hDevice, u8 addr, u8 *data, u8 length)
 
 	res = i2c_transfer(fc8100_i2c->adapter, &rmsg[0], 3);
 	/* printk("i2c_rf_read data : %x\n", data[0]); */
-	return 0;
+
+	/* return status */
+	if (res >= 0)
+		res = 0;
+
+	return res;
 }
 
 static int i2c_rf_write(HANDLE hDevice, u8 addr, u8 *data, u8 length)
@@ -198,7 +211,11 @@ static int i2c_rf_write(HANDLE hDevice, u8 addr, u8 *data, u8 length)
 
 	res = i2c_transfer(fc8100_i2c->adapter, &wmsg[0], 2);
 
-	return 0;
+	/* return status */
+	if (res >= 0)
+		res = 0;
+
+	return res;
 }
 
 int fc8100_i2c_init(HANDLE hDevice, u16 param1, u16 param2)
@@ -247,7 +264,7 @@ int fc8100_i2c_bulkread(HANDLE hDevice, u16 addr, u8 *data, u16 size)
 	/* PRINTF(0, "fc8100_i2c_bulkread 0x%x\n", addr); */
 	res =  i2c_bb_read(hDevice, addr, (u8 *)data, size);
 
-	return BBM_OK;
+	return res;
 }
 
 int fc8100_i2c_bytewrite(HANDLE hDevice, u16 addr, u8 data)
@@ -316,6 +333,7 @@ int fc8100_i2c_deinit(HANDLE hDevice)
 	int res = BBM_NOK;
 
 	res = i2c_deinit();
+
 	return res;
 }
 

@@ -473,6 +473,11 @@ void s5pv310_cpu_suspend(void)
 {
 	unsigned long tmp;
 
+	/* emmc power off delay
+	 * 0x10020988 => 0: 300ms, 1: 6ms
+	 */
+	__raw_writel(1, S5P_PMU(0x0988));
+
 	/*
 	 * Before enter central sequence mode, clock src register have to set
 	 */

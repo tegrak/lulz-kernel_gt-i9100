@@ -2,7 +2,7 @@
  * BT-AMP (BlueTooth Alternate Mac and Phy) 802.11 PAL (Protocol Adaptation Layer)
  *
  * Copyright (C) 1999-2011, Broadcom Corporation
- * 
+ *
  *         Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
@@ -22,7 +22,7 @@
  * other than the GPL, without Broadcom's express prior written consent.
  *
  * $Id: 802.11_bta.h,v 9.2.4.2 2009/02/18 02:53:21 Exp $
-*/
+ */
 
 #ifndef _802_11_BTA_H_
 #define _802_11_BTA_H_

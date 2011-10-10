@@ -308,6 +308,27 @@ config MACH_P6_REV02
 config MACH_TALBOT_REV02
 	bool "TALBOT REV02 (EVT1)"
 
+config MACH_C1_NA_SPR_REV02
+	bool "Gaudi REV02 (EVT1)"
+	select S3C_DEV_I2C2
+	select S3C_DEV_I2C4
+	select S5PV310_SETUP_I2C2
+	select S5PV310_SETUP_I2C4
+
+config MACH_C1_NA_SPR_REV05
+	bool "Gaudi REV05 (EVT1)"
+	select S3C_DEV_I2C2
+	select S3C_DEV_I2C4
+	select S5PV310_SETUP_I2C2
+	select S5PV310_SETUP_I2C4
+
+config MACH_C1_NA_SPR_EPIC2_REV00
+	bool "Epic2 REV00 (EVT1)"
+	select S3C_DEV_I2C2
+	select S3C_DEV_I2C4
+	select S5PV310_SETUP_I2C2
+	select S5PV310_SETUP_I2C4
+
 endchoice
 
 choice
@@ -325,9 +346,19 @@ config TARGET_LOCALE_KOR
           Support Korea Board
 
 config TARGET_LOCALE_NTT
-        bool "JPN"
+	bool "JPN"
         help
-          Support Japan Board          
+          Support Japan Board     
+
+config TARGET_LOCALE_NA
+        bool "NA"
+        help
+          Support North America Board          
+
+config TARGET_LOCALE_NAATT
+        bool "NAGSM"
+        help
+          Support North America GSM ATT Board        
 
 endchoice
 
@@ -468,6 +499,14 @@ config SEC_DEBUG_IRQ_EXIT_LOG
 	default n
 	help
 	  Verbose Logging for IRQ delay.
+
+menuconfig S5PV310_WATCHDOG_RESET
+	bool "S5PV310 watchdog reset to exit from lockup"
+	depends on CPU_S5PV310
+	default n
+	help
+	  Use S5PV310 watchdog reset to exit from lockup
+
 endif
 
 menu "Support dynamic cpu hotplug (Experimental)"

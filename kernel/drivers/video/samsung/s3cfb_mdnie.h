@@ -335,6 +335,12 @@
 #define SIG_MDNIE_DMB_COLD_MODE	22
 #endif	/* CONFIG_TARGET_LOCALE_KOR */
 
+#ifdef CONFIG_TARGET_LOCALE_NTT
+#define SIG_MDNIE_ISDBT_MODE		30
+#define SIG_MDNIE_ISDBT_WARM_MODE	31
+#define SIG_MDNIE_ISDBT_COLD_MODE	32
+#endif
+
 #define UI_STANDARD_MODE_PATH				"/system/etc/mdnie_tune_ui_standard_mode"
 #define UI_MOVIE_MODE_PATH				"/system/etc/mdnie_tune_ui_movie_mode"
 #define UI_DYNAMIC_MODE_PATH				"/system/etc/mdnie_tune_ui_dynamic_mode"
@@ -359,6 +365,15 @@
 #define DMB_COLD_MODE_PATH			"/system/etc/mdnie_tune_dmb_cold_mode"   
 #define DMB_COLD_OUTDOOR_MODE_PATH			"/system/etc/mdnie_tune_dmb_cold_outdoor_mode"
 #endif	/* CONFIG_TARGET_LOCALE_KOR */ 
+
+#ifdef CONFIG_TARGET_LOCALE_NTT
+#define ISDBT_MODE_PATH				"/system/etc/mdnie_tune_isdbt_mode"
+#define ISDBT_OUTDOOR_MODE_PATH		"/system/etc/mdnie_tune_isdbt_outdoor_mode"
+#define ISDBT_WARM_MODE_PATH		"/system/etc/mdnie_tune_isdbt_warm_mode"
+#define ISDBT_WARM_OUTDOOR_MODE_PATH	"/system/etc/mdnie_tune_isdbt_warm_outdoor_mode"
+#define ISDBT_COLD_MODE_PATH	"/system/etc/mdnie_tune_isdbt_cold_mode"   
+#define ISDBT_COLD_OUTDOOR_MODE_PATH	"/system/etc/mdnie_tune_isdbt_cold_outdoor_mode"
+#endif
 
 int s3c_mdnie_init(void);
 int s3c_mdnie_enable(void);

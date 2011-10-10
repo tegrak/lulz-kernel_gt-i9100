@@ -88,11 +88,19 @@ typedef struct wl_iw_extra_params {
 #define WL_AP_STA_LIST          (SIOCIWFIRSTPRIV+17)
 #define WL_AP_MAC_FLTR	        (SIOCIWFIRSTPRIV+19)
 #define WL_AP_BSS_START         (SIOCIWFIRSTPRIV+21)
+#ifdef USE_NA_HOTSPOT
+#define WL_FW_DISASSOC_STA       (SIOCIWFIRSTPRIV+23)
+#else
 #define AP_LPB_CMD              (SIOCIWFIRSTPRIV+23)
+#endif
 #define WL_AP_STOP              (SIOCIWFIRSTPRIV+25)
 #define WL_FW_RELOAD            (SIOCIWFIRSTPRIV+27)
 #define WL_COMBO_SCAN            (SIOCIWFIRSTPRIV+29)
+#ifdef USE_NA_HOTSPOT
+#define WL_AP_MAX_ASSOC           (SIOCIWFIRSTPRIV+31)
+#else
 #define WL_AP_SPARE3            (SIOCIWFIRSTPRIV+31)
+#endif
 #define 		G_SCAN_RESULTS 8*1024
 #define 		WE_ADD_EVENT_FIX	0x80
 #define          G_WLAN_SET_ON	0
@@ -151,6 +159,17 @@ typedef enum broadcast_first_scan {
 #define SEC_LEN		16
 #define KEY_LEN		65
 #define PROFILE_OFFSET	32
+
+struct mflist {
+	uint count;
+	struct ether_addr ea[16];
+};
+struct mac_list_set {
+	uint32	mode;
+	struct mflist white_list;
+	struct mflist black_list;
+};
+
 struct ap_profile {
 	uint8	ssid[SSID_LEN+1];
 	uint8	sec[SEC_LEN];
@@ -161,21 +180,18 @@ struct ap_profile {
 #ifdef USE_HIDDEN_SSID
 	uint32	hidden_ssid;
 #endif
+#ifdef USE_NA_HOTSPOT
+        uint32  op_mode;
+        uint32  key_index;
+        int     is_wep;
+        struct mac_list_set mac_filter;
+#endif
 };
 
 
 #define MACLIST_MODE_DISABLED	0
 #define MACLIST_MODE_ENABLED	1
 #define MACLIST_MODE_ALLOW		2
-struct mflist {
-	uint count;
-	struct ether_addr ea[16];
-};
-struct mac_list_set {
-	uint32	mode;
-	struct mflist white_list;
-	struct mflist black_list;
-};
 #endif   /* #ifdef SOFTAP */
 
 #if WIRELESS_EXT > 12

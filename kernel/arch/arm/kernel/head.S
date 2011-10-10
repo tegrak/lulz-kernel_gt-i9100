@@ -53,7 +53,11 @@
 #define KERNEL_END	_edata_loc
 #else
 #define KERNEL_START	KERNEL_RAM_VADDR
+#ifndef CONFIG_CRYPTO_FIPS
 #define KERNEL_END	_end
+#else
+#define KERNEL_END	0xE8000000	/* change@wtl.whenze - FIPS integrity check.  TODO: Remove this change and do mapping via API call(s) from c code.*/
+#endif
 #endif
 
 /*

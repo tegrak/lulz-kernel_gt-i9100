@@ -41,6 +41,7 @@ struct max17042_chip {
 	struct max17042_platform_data	*pdata;
 
 	int vcell;			/* battery voltage */
+	int avgvcell;		/* average battery voltage */
 	int vfocv;		/* calculated battery voltage */
 	int soc;			/* battery capacity */
 	int raw_soc;		/* fuel gauge raw data */
@@ -78,6 +79,9 @@ static int max17042_get_property(struct power_supply *psy,
 			val->intval = chip->vfocv;
 			break;
 		}
+		break;
+	case POWER_SUPPLY_PROP_VOLTAGE_AVG:
+		val->intval = chip->avgvcell;
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
 		switch (val->intval) {
@@ -134,12 +138,21 @@ static void max17042_write_reg_array(struct i2c_client *client,
 
 static void max17042_init_regs(struct i2c_client *client)
 {
+	u8 data[2];
 	/*struct max17042_platform_data *pdata = client->dev.platform_data; */
 
 	dev_info(&client->dev, "%s\n", __func__);
 
 /*	max17042_write_reg_array(client, pdata->init,
 		pdata->init_size);*/
+
+	if (max17042_read_reg(client, MAX17042_REG_FILTERCFG, data) < 0)
+		return;
+
+	/* Clear average vcell (12 sec) */
+	data[0] &= 0x8f;
+
+	max17042_write_reg(client, MAX17042_REG_FILTERCFG, data);
 }
 
 static void max17042_alert_init(struct i2c_client *client)
@@ -222,6 +235,11 @@ static void max17042_get_vcell(struct i2c_client *client)
 		return;
 
 	chip->vcell = ((data[0] >> 3) + (data[1] << 5)) * 625;
+
+	if (max17042_read_reg(client, MAX17042_REG_AVGVCELL, data) < 0)
+		return;
+
+	chip->avgvcell = ((data[0] >> 3) + (data[1] << 5)) * 625;
 
 	//printk(KERN_ERR "%s : vcell = %dmV\n", __func__, chip->vcell);
 }
@@ -430,9 +448,9 @@ static void max17042_work(struct work_struct *work)
 
 	if ((chip->status&0x02)==0x02) {
 		max17042_get_config(chip->client);
-		printk("config 0x%x, status 0x%x\n",
-			chip->config, chip->status);
-		panic("[1]fuel gauge reset occurred!");
+		printk("config 0x%x, status 0x%x, vcell 0x%x, row_soc 0x%x\n",
+			chip->config, chip->status, chip->vcell, chip->raw_soc);
+//		panic("[1]fuel gauge reset occurred!");
 	}
 
 	if (chip->is_fuel_alerted) {

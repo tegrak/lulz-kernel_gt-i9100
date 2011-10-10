@@ -683,6 +683,7 @@ static ssize_t k3g_self_test(struct device *dev,
 				} else
 					break;
 			}
+
 		}
 		if (temp < 0) {
 			pr_err("%s: STATUS_REGS i2c reading failed\n",

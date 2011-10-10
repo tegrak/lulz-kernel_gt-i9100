@@ -78,6 +78,7 @@ struct s3c_sdhci_platdata {
 			    void __iomem *regbase,
 			    struct mmc_ios *ios,
 			    struct mmc_card *card);
+        int enable_intr_on_resume;
 };
 
 /**

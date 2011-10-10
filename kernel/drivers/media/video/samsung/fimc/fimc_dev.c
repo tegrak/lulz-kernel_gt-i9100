@@ -1204,7 +1204,7 @@ static int fimc_open(struct file *filp)
 	struct fimc_control *ctrl;
 	struct s3c_platform_fimc *pdata;
 	struct fimc_prv_data *prv_data;
-	int in_use, max_use;
+	int in_use;
 	int ret;
 	int i;
 
@@ -1214,12 +1214,7 @@ static int fimc_open(struct file *filp)
 	mutex_lock(&ctrl->lock);
 
 	in_use = atomic_read(&ctrl->in_use);
-	if (ctrl->id == FIMC0 || ctrl->id == FIMC2)
-		max_use = 1;
-	else
-		max_use = FIMC_MAX_CTXS + 1;
-
-	if (in_use >= max_use) {
+	if (in_use > FIMC_MAX_CTXS) {
 		ret = -EBUSY;
 		goto resource_busy;
 	} else {
@@ -2092,14 +2087,16 @@ static inline int fimc_suspend_cap(struct fimc_control *ctrl)
 				__func__, ctrl->suspend_framecnt);
 	} else {
 		if (ctrl->id == FIMC0 && ctrl->cam->initialized) {
+			ctrl->cam->initialized = 0;
+
+			v4l2_subdev_call(ctrl->cam->sd, core, s_power, 0);
+
 			if (ctrl->cam->cam_power)
 				ctrl->cam->cam_power(0);
 			
 			/* shutdown the MCLK */
 			clk_disable(ctrl->cam->clk);
 			fimc->mclk_status = CAM_MCLK_OFF;
-
-			ctrl->cam->initialized = 0;
 		}
 	}
 	ctrl->power_status = FIMC_POWER_OFF;
@@ -2359,6 +2356,8 @@ static inline int fimc_resume_cap(struct fimc_control *ctrl)
 		
 			if (ctrl->cam->cam_power)
 				ctrl->cam->cam_power(1);
+
+			v4l2_subdev_call(ctrl->cam->sd, core, s_power, 1);
 
 			ctrl->cam->initialized = 1;
 		}

@@ -402,6 +402,10 @@ static int update_brightness(struct ld9040 *lcd)
 {
 	int ret;
 
+        ret = ld9040_gamma_ctl(lcd);
+        if (ret) {
+                return -1;
+        }
 	ret = ld9040_set_elvss(lcd);
 	if (ret) {
 		return -1;
@@ -412,10 +416,6 @@ static int update_brightness(struct ld9040 *lcd)
 		return -1;
 	}
 
-	ret = ld9040_gamma_ctl(lcd);
-	if (ret) {
-		return -1;
-	}
 
 	return 0;
 }

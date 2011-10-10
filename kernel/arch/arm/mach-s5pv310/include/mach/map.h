@@ -317,4 +317,9 @@
 #define S5PV310_SZ_ACE			SZ_32K
 #define S5P_SZ_ACE			S5PV310_SZ_ACE
 
+#ifdef CONFIG_TARGET_LOCALE_NA
+#define S5PV310_PA_MODEMIF      (0x13A00000)
+#define S5P_PA_MODEMIF          S5PV310_PA_MODEMIF
+#endif
+
 #endif /* __ASM_ARCH_MAP_H */

@@ -127,7 +127,11 @@ struct max8997_muic_data {
 	int		(*cfg_uart_gpio) (void);
 	void		(*jig_uart_cb) (int path);
 	int			(*host_notify_cb) (int enable);
+#if defined(CONFIG_TARGET_LOCALE_NA)
+        int             gpio_uart_sel;
+#else
 	int 		gpio_usb_sel;
+#endif /* CONFIG_TARGET_LOCALE_NA */
 	int		sw_path;
 	int		uart_path;
 };

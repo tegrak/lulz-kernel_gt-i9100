@@ -10,6 +10,9 @@
  * any later version.
  *
  */
+#ifdef SEC_FIPS_ENABLED
+#include "fips_internal.h"
+#else
 #ifndef _CRYPTO_INTERNAL_H
 #define _CRYPTO_INTERNAL_H
 
@@ -138,4 +141,4 @@ static inline void crypto_notify(unsigned long val, void *v)
 }
 
 #endif	/* _CRYPTO_INTERNAL_H */
-
+#endif

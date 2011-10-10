@@ -813,7 +813,7 @@ void flush_pmem_file(struct file *file, unsigned long offset, unsigned long len)
 		} else {
 			dmac_flush_range(vaddr, vaddr + pmem_len(id, data));
 			outer_flush_range(virt_to_phys(vaddr), virt_to_phys(vaddr + pmem_len(id, data)));
-		}
+		}		
 		goto end;
 	}
 	/* otherwise, flush the region of the file we are drawing */
@@ -834,7 +834,7 @@ void flush_pmem_file(struct file *file, unsigned long offset, unsigned long len)
 			} else {
 				dmac_flush_range(flush_start, flush_end);
 				outer_flush_range(virt_to_phys(flush_start), virt_to_phys(flush_end));
-			}
+			}			
 			break;
 		}
 	}

@@ -295,45 +295,55 @@ static int sipc4_check_hdlc_start(struct sipc4_rx_data *data, char *buf)
 	return sizeof(hdlc_start);
 }
 
+static void print_buf(const char *buf, size_t len, const char* tag)
+{
+	int i;
+	char *b = buf;
+
+	for(i=0;i < len/16 + 1; i++) {
+		printk(KERN_DEBUG
+		"%s:%02X %02X %02X %02X  %02X %02X %02X %02X  "
+		"%02X %02X %02X %02X  %02X %02X %02X %02X\n",
+		(tag) ? tag : "buf", *b++, *b++, *b++, *b++, *b++, *b++, *b++,
+		*b++, *b++, *b++, *b++, *b++, *b++, *b++, *b++, *b++
+		);
+	}
+}
+
+#define sipc_min(a, b) (((a) < (b)) ? (a) : (b))
+#define sipc_max(a, b) (((a) > (b)) ? (a) : (b))
 static int sipc4_check_header(struct sipc4_rx_data *data, char *buf, int rest)
 {
-	struct net_device *dev = data->dev;
-	struct sk_buff *skb = data->skb;
-	int header_size = sipc4_get_header_size(data->format);
+	struct sipc_rx_hdr *hdr = data->rx_hdr;
+	int head_size = sipc4_get_header_size(data->format);
 	int done_len = 0;
 	int len;
 
-	if (!skb) {
+	if (!hdr->start) {
 		len = sipc4_check_hdlc_start(data, buf);
 		if (len < 0)
 			return len;
-		if (data->format == SIPC4_FMT) {
-			printk(KERN_DEBUG
-			"IPC:%02X %02X %02X %02x  %02X %02X %02X %02X  "
-			"%02X %02X %02X %02X  %02X %02X %02X %02X\n",
-			*(buf+1), *(buf+2), *(buf+3), *(buf+4),
-			*(buf+5), *(buf+6), *(buf+7), *(buf+8),
-			*(buf+9), *(buf+10), *(buf+11), *(buf+12),
-			*(buf+13), *(buf+14), *(buf+15), *(buf+16)
-			);
+		memcpy(&hdr->start, hdlc_start, sizeof(hdlc_start));
+		hdr->len = 0;
+
+		switch (data->format) {
+		case SIPC4_FMT:
+		/*case SIPC4_RAW:*/
+		/*case SIPC4_RFS:*/
+			print_buf(buf, 0, NULL);
+			break;
 		}
 		buf += len;
 		rest -= len;
 		done_len += len;
-
-		skb = sipc4_alloc_skb(dev, header_size);
-		if (!skb)
-			return -ENOMEM;
-		data->skb = skb;
 	}
 
-	if (skb->len < header_size) {
-		len = header_size - skb->len;
-		len = rest < len ? rest : len;
-		memcpy(skb_put(skb, len), buf, len);
+	if (hdr->len < head_size) {
+		len = sipc_min(rest, head_size - hdr->len);
+		memcpy(hdr->hdr + hdr->len, buf, len);
+		hdr->len += len;
 		done_len += len;
 	}
-
 	return done_len;
 }
 
@@ -341,55 +351,60 @@ static int sipc4_hdlc_format_rx(struct sipc4_rx_data *data);
 
 static int sipc4_check_data(struct sipc4_rx_data *data, char *buf, int rest)
 {
+	struct net_device *dev = data->dev;
 	struct sk_buff *skb = data->skb;
-	struct sipc4_rx_frag *frag = (struct sipc4_rx_frag *)skb->cb;
-	struct page *page;
-	int header_size = sipc4_get_header_size(data->format);
-	int hdlc_size = sipc4_get_hdlc_size(skb->data, data->format);
-	int data_size = hdlc_size - header_size;
-	int skb_data_size = skb->data_len + frag->data_len;
-	int rest_data_size = data_size - skb_data_size;
+	struct sipc_rx_hdr *hdr = data->rx_hdr;
+	int head_size = sipc4_get_header_size(data->format);
+	int data_size = sipc4_get_hdlc_size(hdr->hdr, data->format) - head_size;
+	int alloc_size = data_size;
 	int len;
-	int skb_max_pages = MAX_SKB_FRAGS;
+	struct sk_buff *skb_new;
+	int err;
 
-	len = rest < rest_data_size ? rest : rest_data_size;
+	if (!skb) {
+		switch (data->format) {
+		case SIPC4_RFS:
+			/* Send the RFS header to RILD*/
+			alloc_size = sipc_min(data_size, rest) + head_size;
+			skb = sipc4_alloc_skb(dev, alloc_size);
+			if (unlikely(!skb))
+				return -ENOMEM;
+			memcpy(skb_put(skb, head_size), hdr->hdr, head_size);
+			break;
 
-	page = __netdev_alloc_page(data->dev, GFP_ATOMIC);
-	if (!page)
-		return -ENOMEM;
-
-	if (data->format == SIPC4_RFS)
-		skb_max_pages = 1;
-
-	/* check fragment number */
-	if (skb_shinfo(skb)->nr_frags >= skb_max_pages) {
-		struct sk_buff *skb_new;
-		int err;
-
-		skb_new = sipc4_alloc_skb(data->dev, header_size);
-		if (!skb_new) {
-			/*netdev_free_page(data->dev, page);*/
-			return -ENOMEM;
+		default:
+			skb = sipc4_alloc_skb(dev, alloc_size);
+			if (unlikely(!skb))
+				return -ENOMEM;
+			break;
 		}
+		data->skb = skb;
+	} else {
+		switch (data->format) {
+		case SIPC4_RFS:
+			alloc_size = sipc_min(data_size - hdr->flag_len, rest);
+			skb_new = sipc4_alloc_skb(data->dev, alloc_size);
+			if (unlikely(!skb_new))
+				return -ENOMEM;
 
-		memcpy(skb_put(skb_new, header_size), skb->data, header_size);
-		memcpy(skb_new->cb, skb->cb, sizeof(struct sipc4_rx_frag));
-		frag = (struct sipc4_rx_frag *)skb_new->cb;
-		frag->data_len += skb->data_len;
+			err = sipc4_hdlc_format_rx(data);
+			if (err < 0) {
+				dev_kfree_skb_any(skb_new);
+				return err;
+			}
+			skb = data->skb = skb_new;
+			break;
 
-		err = sipc4_hdlc_format_rx(data);
-		if (err < 0) {
-			dev_kfree_skb_any(skb_new);
-			/*netdev_free_page(data->dev, page);*/
-			return err;
+		default:
+			/* do noting, IPC,RAW MTU is 1500byte */
+			break;
 		}
-
-		skb = data->skb = skb_new;
 	}
 
 	/* handle data */
-	memcpy(page_address(page), buf, len);
-	skb_add_rx_frag(skb, skb_shinfo(skb)->nr_frags, page, 0, len);
+	len = sipc_min(rest, alloc_size - skb->len);
+	memcpy(skb_put(skb, len), buf, len);
+	hdr->flag_len += len;
 
 	return len;
 }
@@ -410,12 +425,10 @@ static int sipc4_fmt_rx(struct sipc4_rx_data *data)
 {
 	struct net_device *dev = data->dev;
 	struct sk_buff *skb = data->skb;
-	int ch = sipc4_get_hdlc_ch(skb->data, SIPC4_FMT);
-	int control = sipc4_get_hdlc_control(skb->data, SIPC4_FMT);
+	struct sipc_rx_hdr *hdr = data->rx_hdr;
+	int ch = sipc4_get_hdlc_ch(hdr->hdr, SIPC4_FMT);
+	int control = sipc4_get_hdlc_control(hdr->hdr, SIPC4_FMT);
 	int info_id = control & FMT_INFOID_MASK;
-
-	/* Remove header */
-	skb_pull(skb, sipc4_get_header_size(SIPC4_FMT));
 
 	if (control & FMT_MORE_BIT) {
 		skb_queue_tail(&fmt_multi_list[info_id], skb);
@@ -436,10 +449,8 @@ static int sipc4_raw_rx(struct sipc4_rx_data *data)
 {
 	struct net_device *dev = data->dev;
 	struct sk_buff *skb = data->skb;
-	int ch = sipc4_get_hdlc_ch(skb->data, SIPC4_RAW);
-
-	/* Remove header */
-	skb_pull(skb, sipc4_get_header_size(SIPC4_RAW));
+	struct sipc_rx_hdr *hdr = data->rx_hdr;
+	int ch = sipc4_get_hdlc_ch(hdr->hdr, SIPC4_RAW);
 
 	/* check pdp channel */
 	if (ch >= CHID_PSD_DATA1 && ch <= CHID_PSD_DATA15)
@@ -454,12 +465,8 @@ static int sipc4_rfs_rx(struct sipc4_rx_data *data)
 {
 	struct net_device *dev = data->dev;
 	struct sk_buff *skb = data->skb;
-	struct sipc4_rx_frag *frag = (struct sipc4_rx_frag *)skb->cb;
-	int ch = sipc4_get_hdlc_ch(skb->data, SIPC4_RFS);
-
-	/* Remove header */
-	if (frag->data_len)
-		skb_pull(skb, sipc4_get_header_size(SIPC4_RFS));
+	struct sipc_rx_hdr *hdr = data->rx_hdr;
+	int ch = sipc4_get_hdlc_ch(hdr->hdr, SIPC4_RFS);
 
 	return sipc4_netif_rx(dev, skb, SIPC4_RES(SIPC4_RFS, ch));
 }
@@ -470,12 +477,15 @@ static int sipc4_hdlc_format_rx(struct sipc4_rx_data *data)
 
 	switch (data->format) {
 	case SIPC4_FMT:
+		/*print_buf(data->skb->data, 15, "IPC");*/
 		err = sipc4_fmt_rx(data);
 		break;
 	case SIPC4_RAW:
+		/*print_buf(data->skb->data, 31, "RAW");*/
 		err = sipc4_raw_rx(data);
 		break;
 	case SIPC4_RFS:
+		/*print_buf(data->skb->data, 15, "RFS");*/
 		err = sipc4_rfs_rx(data);
 		break;
 	default:
@@ -527,6 +537,7 @@ next_frame:
 	err = sipc4_hdlc_format_rx(data);
 	if (err < 0)
 		goto end;
+	memset(data->rx_hdr, 0x00, sizeof(struct sipc_rx_hdr));
 
 	data->skb = NULL;
 

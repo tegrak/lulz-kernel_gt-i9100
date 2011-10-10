@@ -2,7 +2,7 @@
  * BT-AMP (BlueTooth Alternate Mac and Phy) HCI (Host/Controller Interface)
  *
  * Copyright (C) 1999-2011, Broadcom Corporation
- * 
+ *
  *         Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
@@ -22,7 +22,7 @@
  * other than the GPL, without Broadcom's express prior written consent.
  *
  * $Id: bt_amp_hci.h,v 9.4.4.2.32.5 2009/10/16 21:24:36 Exp $
-*/
+ */
 
 #ifndef _bt_amp_hci_h
 #define _bt_amp_hci_h

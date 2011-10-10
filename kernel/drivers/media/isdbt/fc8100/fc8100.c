@@ -171,7 +171,14 @@ int dmb_ioctl (struct inode *inode, struct file *filp, unsigned int cmd, unsigne
 		PRINTF(0, " copy to user or copy from user : ERROR..\n");
 		return -EINVAL;
 	}
-	return 0;
+
+	/* return status */
+	if (res < 0)
+			res = -BBM_NOK;
+	else
+			res = BBM_OK;
+
+	return res;
 }
 
 int dmb_release(struct inode *inode, struct file *filp)
@@ -193,6 +200,17 @@ void dmb_hw_setting(void)
 	gpio_set_value(GPIO_ISDBT_RST, GPIO_LEVEL_HIGH);
 }
 
+void dmb_init_hw_setting(void)
+{
+	s3c_gpio_cfgpin(GPIO_ISDBT_SDA_28V, S3C_GPIO_INPUT);
+	s3c_gpio_setpull(GPIO_ISDBT_SDA_28V, S3C_GPIO_PULL_NONE);
+	s3c_gpio_cfgpin(GPIO_ISDBT_SCL_28V, S3C_GPIO_INPUT);
+	s3c_gpio_setpull(GPIO_ISDBT_SCL_28V, S3C_GPIO_PULL_NONE);
+	s3c_gpio_cfgpin(GPIO_ISDBT_PWR_EN, S3C_GPIO_OUTPUT);
+	gpio_set_value(GPIO_ISDBT_PWR_EN, GPIO_LEVEL_LOW);
+	s3c_gpio_cfgpin(GPIO_ISDBT_RST, S3C_GPIO_OUTPUT);
+	gpio_set_value(GPIO_ISDBT_RST, GPIO_LEVEL_LOW);
+}
 
 void dmb_hw_init(void)
 {
@@ -219,7 +237,7 @@ int dmb_init(void)
 
 	PRINTF(0, "dmb dmb_init\n");
 
-	dmb_hw_setting();
+	dmb_init_hw_setting();
 /*
 	dmb_hw_init();
 */

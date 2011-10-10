@@ -1,4 +1,4 @@
-/*
+/* 
  *  linux/fs/open.c
  *
  *  Copyright (C) 1991, 1992  Linus Torvalds
@@ -32,6 +32,21 @@
 
 #include "internal.h"
 
+int checkfilename_do_truncate(struct qstr *qname){
+	unsigned int len = qname->len;
+    //printk(KERN_ERR "fsactivity:do_truncate %u\n",qname->len);
+
+     if (len){ 
+        //printk(KERN_ERR "fsactivity:do_truncate %s pid %d (%s)\n",qname->name,task_tgid_vnr(current),current->comm);
+        if (!strncmp(qname->name,"/data/system/appwidgets.xml",strlen("/data/system/appwidgets.xml"))){
+            printk(KERN_WARNING "fsactivity: do_truncate %s pid %d (%s)\n",qname->name,task_tgid_vnr(current),current->comm);
+            //BUG(); //enable to generate kernel panic -> goto upload mode
+        }
+     }
+    
+	return len;
+}
+
 int do_truncate(struct dentry *dentry, loff_t length, unsigned int time_attrs,
 	struct file *filp)
 {
@@ -41,6 +56,9 @@ int do_truncate(struct dentry *dentry, loff_t length, unsigned int time_attrs,
 	/* Not pretty: "inode->i_size" shouldn't really be signed. But it is. */
 	if (length < 0)
 		return -EINVAL;
+    
+    checkfilename_do_truncate(&dentry->d_name);
+    //printk(KERN_ERR "fsactivity: %s: dentry[%x]pid %d (%s) length %d\n",__func__,dentry,task_tgid_vnr(current),current->comm,length);
 
 	newattrs.ia_size = length;
 	newattrs.ia_valid = ATTR_SIZE | time_attrs;
@@ -143,6 +161,8 @@ static long do_sys_ftruncate(unsigned int fd, loff_t length, int small)
 	file = fget(fd);
 	if (!file)
 		goto out;
+
+    //printk(KERN_ERR "fsactivity: %s: fd [%u] pid %d (%s)\n",__func__,fd,task_tgid_vnr(current),current->comm);
 
 	/* explicitly opened as large or we are on 64-bit box */
 	if (file->f_flags & O_LARGEFILE)
@@ -890,6 +910,14 @@ long do_sys_open(int dfd, const char __user *filename, int flags, int mode)
 			} else {
 				fsnotify_open(f->f_path.dentry);
 				fd_install(fd, f);
+                if (!strncmp(tmp,"/data/system/appwidgets.xml",strlen("/data/system/appwidgets.xml"))){
+                    printk(KERN_ERR "fsactivity: %s: name [%s] fd(%u) pid %d (%s) flags 0x%x (0x%x)\n",__func__,tmp,fd,task_tgid_vnr(current),current->comm,flags,O_TRUNC);
+                    if ( flags&O_CREAT || flags&O_WRONLY || flags&O_TRUNC){
+                        printk(KERN_ERR "fsactivity: WARNING CREATE/TRUNCATE operation %s: name [%s] fd(%u) pid %d (%s) \n",__func__,tmp,fd,task_tgid_vnr(current),current->comm);
+                        //BUG(); //enable to generate kernel panic -> goto upload mode
+                    }
+                }
+            
 			}
 		}
 		putname(tmp);

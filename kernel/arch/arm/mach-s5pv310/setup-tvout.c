@@ -57,5 +57,3 @@ void s5p_cec_cfg_gpio(struct platform_device *pdev)
 	s3c_gpio_setpull(S5PV310_GPX3(6), S3C_GPIO_PULL_NONE);
 #endif
 }
-
-

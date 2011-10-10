@@ -261,7 +261,7 @@ retry:
 	if (unlikely(ret < 0)) {
 		if (cam->cam_power)
 			cam->cam_power(0);
-
+		
 		if (fimc->mclk_status == CAM_MCLK_ON) {
 			clk_disable(ctrl->cam->clk);
 			fimc->mclk_status = CAM_MCLK_OFF;
@@ -695,7 +695,7 @@ int fimc_s_input(struct file *file, void *fh, unsigned int i)
 	if (fimc->active_camera == 0) {
 		if (!ctrl->cam->initialized)
 			ret = fimc_init_camera(ctrl);
-		
+
 		if (unlikely(ret < 0)) {
 			if (ret == -ENOSYS) {
 				/* return no error If firmware is bad.
@@ -830,16 +830,10 @@ static int fimc_fmt_depth(struct fimc_control *ctrl, struct v4l2_pix_format *f)
 static int fimc_calc_frame_ratio(struct fimc_control *ctrl,
 	struct fimc_capinfo *cap, struct v4l2_format *f)
 {
-	if (f->fmt.pix.priv != V4L2_PIX_FMT_MODE_PREVIEW)
-		return 0;
-
 	if (ctrl->cap->vt_mode) {
 		f->fmt.pix.width = 640;
 		f->fmt.pix.height = 480;
-		return 0;
-	}
-
-	if (ctrl->cap->movie_mode) {
+	} else if (ctrl->cap->movie_mode) {
 			switch (FRM_RATIO(f->fmt.pix.width, f->fmt.pix.height)) {
 			case FRM_RATIO_QCIF:
 				cap->fmt.width = f->fmt.pix.width = 528;
@@ -866,8 +860,34 @@ static int fimc_calc_frame_ratio(struct fimc_control *ctrl,
 					cap->fmt.width, cap->fmt.height);
 				break;
 			}
-		return 0;
+	} else {	/* hdr */	
+		switch (FRM_RATIO(f->fmt.pix.width, f->fmt.pix.height)) {
+			case FRM_RATIO_QCIF:
+				cap->fmt.width = 528;
+				cap->fmt.height = 432;
+				break;
+			case FRM_RATIO_VGA:
+				cap->fmt.width = 640;
+				cap->fmt.height = 480;
+				break;
+			case FRM_RATIO_WVGA:
+				cap->fmt.width = 800;
+				cap->fmt.height = 480;
+				break;
+			case FRM_RATIO_D1:
+				cap->fmt.width = 720;
+				cap->fmt.height = 480;
+				break;
+			case FRM_RATIO_HD:
+				cap->fmt.width = 800;
+				cap->fmt.height = 450;
+				break;
+			default:
+				fimc_warn("invalid frame ratio, %dx%d\n",
+					cap->fmt.width, cap->fmt.height);
+				break;
 		}
+	}
 
 	return 0;
 }
@@ -890,8 +910,11 @@ int fimc_s_fmt_vid_capture(struct file *file, void *fh, struct v4l2_format *f)
 	memset(&cap->fmt, 0, sizeof(cap->fmt));
 	memcpy(&cap->fmt, &f->fmt.pix, sizeof(cap->fmt));
 
-	if (ctrl->id != FIMC2 && (ctrl->cap->movie_mode || ctrl->cap->vt_mode))
+	if (ctrl->id != FIMC2) {
+		if (cap->movie_mode || cap->vt_mode || 
+				cap->fmt.priv == V4L2_PIX_FMT_MODE_HDR)
 		fimc_calc_frame_ratio(ctrl, cap, f);
+	}
 
 	/*
 	 * Note that expecting format only can be with
@@ -1806,7 +1829,11 @@ int fimc_streamon_capture(void *fh)
 				if (ret != -ENOIOCTLCMD)
 					return ret;
 			} else {
+#ifdef CONFIG_TARGET_LOCALE_KOR
+				if ((ctrl->cap->vt_mode != 0) &&
+#else
 				if ((ctrl->cap->vt_mode == 1) &&
+#endif
 						(cap->rotate == 90 || cap->rotate == 270)) {
 					ctrl->cam->window.left = 136;
 					ctrl->cam->window.top = 0;
@@ -1814,9 +1841,9 @@ int fimc_streamon_capture(void *fh)
 					ctrl->cam->window.height = 480;
 					ctrl->cam->width = cam_frmsize.discrete.width;
 					ctrl->cam->height = cam_frmsize.discrete.height;
-					dev_err(ctrl->dev, "vtmode = 1, rotate = %d,"
+					dev_err(ctrl->dev, "vtmode = %d, rotate = %d,"
 						" cam->width = %d,"
-						" cam->height = %d\n", cap->rotate,
+						" cam->height = %d\n", ctrl->cap->vt_mode, cap->rotate,
 						 ctrl->cam->width, ctrl->cam->height);
 				} else {
 					if (cam_frmsize.discrete.width > 0 && cam_frmsize.discrete.height > 0) {
@@ -1836,7 +1863,7 @@ int fimc_streamon_capture(void *fh)
 				 * no error although no s_stream api support
 				*/
 				if (fimc->active_camera == 0) {
-					if (cap->fmt.priv == V4L2_PIX_FMT_MODE_CAPTURE) {
+					if (cap->fmt.priv != V4L2_PIX_FMT_MODE_PREVIEW) {
 						v4l2_subdev_call(cam->sd, video, s_stream,
 								STREAM_MODE_CAM_ON);
 					}
@@ -1866,7 +1893,7 @@ int fimc_streamon_capture(void *fh)
 				}
 
 				if (fimc->active_camera == 0) {
-					if (cap->fmt.priv != V4L2_PIX_FMT_MODE_CAPTURE) {
+					if (cap->fmt.priv == V4L2_PIX_FMT_MODE_PREVIEW) {
 						v4l2_subdev_call(cam->sd, video, s_stream,
 								STREAM_MODE_CAM_ON);
 					}
@@ -1878,7 +1905,8 @@ int fimc_streamon_capture(void *fh)
 				subdev_call(ctrl, video, s_stream, STREAM_MODE_CAM_ON);
 			}
 		} else {
-			v4l2_subdev_call(cam->sd, video, s_stream, STREAM_MODE_MOVIE_ON);
+			if (cap->fmt.priv != V4L2_PIX_FMT_MODE_HDR)
+				v4l2_subdev_call(cam->sd, video, s_stream, STREAM_MODE_MOVIE_ON);
 		}
 	}
 
@@ -2021,7 +2049,8 @@ int fimc_streamoff_capture(void *fh)
 		fimc_hwset_reset(ctrl);
 	} else {
 		fimc_hwset_reset(ctrl);
-		v4l2_subdev_call(ctrl->cam->sd, video, s_stream, STREAM_MODE_MOVIE_OFF);
+		if (cap->fmt.priv != V4L2_PIX_FMT_MODE_HDR)
+			v4l2_subdev_call(ctrl->cam->sd, video, s_stream, STREAM_MODE_MOVIE_OFF);
 	}
 
 	/* Set FIMD to write back */
@@ -2047,11 +2076,6 @@ int fimc_qbuf_capture(void *fh, struct v4l2_buffer *b)
 	struct fimc_control *ctrl = fh;
 	struct s3c_platform_fimc *pdata = to_fimc_plat(ctrl->dev);
 	struct fimc_capinfo *cap = ctrl->cap;
-
-	if (!cap || !ctrl->cam) {
-		fimc_err("%s: No capture device.\n", __func__);
-		return -ENODEV;
-	}
 
 	if (b->memory != V4L2_MEMORY_MMAP) {
 		fimc_err("%s: invalid memory type\n", __func__);
@@ -2091,11 +2115,6 @@ int fimc_dqbuf_capture(void *fh, struct v4l2_buffer *b)
 	int pp, ret = 0;
 
 	struct s3c_platform_fimc *pdata = to_fimc_plat(ctrl->dev);
-
-	if (!cap || !ctrl->cam) {
-		fimc_err("%s: No capture device.\n", __func__);
-		return -ENODEV;
-	}
 
 	if (b->memory != V4L2_MEMORY_MMAP) {
 		fimc_err("%s: invalid memory type\n", __func__);

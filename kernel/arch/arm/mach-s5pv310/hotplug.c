@@ -70,7 +70,7 @@ inline void platform_do_lowpower(unsigned int cpu)
 
 		if (cpu == 1) {
 			__raw_writel(0, S5P_VA_EXTGIC_CPU+0x8000);
-			
+
 			for(i = 0; i < 5; i++)
 				__raw_writel(0xffff, S5P_VA_EXTGIC_DIST + 0x8280 + i*0x4);
 

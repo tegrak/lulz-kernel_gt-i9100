@@ -105,7 +105,7 @@ static struct irq_chip combiner_chip = {
 	.unmask		= combiner_unmask_irq,
 	.disable	= combiner_mask_irq,
 #ifdef CONFIG_SMP
-	.set_affinity 	= combiner_set_cpu,
+	.set_affinity	= combiner_set_cpu,
 #endif
 };
 

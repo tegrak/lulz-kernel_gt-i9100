@@ -9,7 +9,9 @@
  * any later version.
  *
  */
-
+#ifdef SEC_FIPS_ENABLED
+#include <crypto/fips_skcipher.h>
+#else
 #ifndef _CRYPTO_SKCIPHER_H
 #define _CRYPTO_SKCIPHER_H
 
@@ -107,4 +109,4 @@ static inline void skcipher_givcrypt_set_giv(
 }
 
 #endif	/* _CRYPTO_SKCIPHER_H */
-
+#endif

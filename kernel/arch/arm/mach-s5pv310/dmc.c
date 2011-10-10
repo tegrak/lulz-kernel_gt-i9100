@@ -72,4 +72,3 @@ void s5pv310_dmc_ppmu_update(struct s5pv310_dmc_ppmu_hw *ppmu)
 			__raw_readl(dmc_base + (0xf110 + (0x10 * i)));
 	}
 }
-

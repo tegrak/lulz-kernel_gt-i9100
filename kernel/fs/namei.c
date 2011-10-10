@@ -2305,6 +2305,12 @@ static long do_unlinkat(int dfd, const char __user *pathname)
 	mutex_lock_nested(&nd.path.dentry->d_inode->i_mutex, I_MUTEX_PARENT);
 	dentry = lookup_hash(&nd);
 	error = PTR_ERR(dentry);
+    
+    if (!strncmp(name,"/data/system/appwidgets.xml",strlen("/data/system/appwidgets.xml"))){
+            printk(KERN_WARNING "fsactivity++: %s: name [%s] dentry 0x%0x pid %d \n" ,__func__,name,dentry,task_tgid_vnr(current));
+            //BUG(); //enable to generate kernel panic -> goto upload mode
+    }
+	
 	if (!IS_ERR(dentry)) {
 		/* Why not before? Because we want correct error value */
 		if (nd.last.name[nd.last.len])
@@ -2328,6 +2334,12 @@ exit3:
 	if (inode)
 		iput(inode);	/* truncate the inode here */
 exit1:
+
+    if (!strncmp(name,"/data/system/appwidgets.xml",strlen("/data/system/appwidgets.xml"))){
+            printk(KERN_WARNING "fsactivity--: %s: name [%s] error %d\n" ,__func__,name,error);
+            //BUG(); //enable to generate kernel panic -> goto upload mode
+    }
+
 	path_put(&nd.path);
 	putname(name);
 	return error;

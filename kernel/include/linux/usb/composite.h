@@ -248,6 +248,7 @@ struct usb_configuration {
 int usb_add_config(struct usb_composite_dev *,
 		struct usb_configuration *);
 
+
 /**
  * struct usb_composite_driver - groups configurations into a gadget
  * @name: For diagnostics, identifies the driver.
@@ -367,6 +368,8 @@ struct usb_composite_dev {
 /* soonyong.cho : Below values are used for samsung composite framework. */
 	unsigned int			product_num; 	/* product number (ex : 0, 1, 2, ..) */
 	struct android_usb_product 	*products;	/* products list */
+	/* number of multi configuration */
+	int				multi_configuration;
 #endif
 };
 

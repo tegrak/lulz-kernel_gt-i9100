@@ -502,12 +502,18 @@ static int logger_open(struct inode *inode, struct file *file)
  *
  * Note this is a total no-op in the write-only case. Keep it that way!
  */
-static int logger_release(struct inode *ignored, struct file *file)
+static int logger_release(struct inode *inode, struct file *file)
 {
 	if (file->f_mode & FMODE_READ) {
 		struct logger_reader *reader = file->private_data;
+		struct logger_log *log;
+		unsigned long start = jiffies;
+		log = get_log_from_minor(MINOR(inode->i_rdev));
+		mutex_lock(&log->mutex);
 		list_del(&reader->list);
+		mutex_unlock(&log->mutex);
 		kfree(reader);
+		pr_info("%s: took %d msec\n", __func__, jiffies_to_msecs(jiffies - start));
 	}
 
 	return 0;

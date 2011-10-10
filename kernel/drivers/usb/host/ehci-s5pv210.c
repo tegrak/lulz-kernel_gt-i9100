@@ -20,6 +20,10 @@
 #define CP_PORT		 2  /* HSIC0 in S5PC210 */
 #define RETRY_CNT_LIMIT 30  /* Max 300ms wait for cp resume*/
 
+#ifdef CONFIG_MACH_C1_NA_SPR_REV02
+int s5pv210_onoff_flag=0;
+#endif
+
 struct usb_hcd *s5pv210_hcd;	/* For ehci on/off sysfs */
 
 extern int usb_disabled(void);
@@ -30,7 +34,10 @@ extern void usb_host_phy_suspend(void);
 extern int usb_host_phy_resume(void);
 extern void usb_host_phy_sleep(void);
 extern void usb_host_phy_wakeup(void);
+
+#ifdef CONFIG_SAMSUNG_PHONE_SVNET
 extern int mc_control_active_state(int val);
+#endif
 
 static void s5pv210_start_ehc(void);
 static void s5pv210_stop_ehc(void);
@@ -260,8 +267,9 @@ static void s5pv210_wait_for_cp_resume(struct usb_hcd *hcd)
 	u32 val32, retry_cnt = 0;
 
 	portsc = &ehci->regs->port_status[CP_PORT-1];
-
+#ifdef CONFIG_SAMSUNG_PHONE_SVNET
 	mc_control_active_state(1); /* CP USB Power On */
+#endif
 	do {
 		msleep(10);
 		val32 = ehci_readl(ehci, portsc);
@@ -272,13 +280,18 @@ static void s5pv210_wait_for_cp_resume(struct usb_hcd *hcd)
 static void s5pv210_start_ehc(void)
 {
 	usb_host_phy_init();
+        #ifdef CONFIG_SAMSUNG_PHONE_SVNET
 	/*mc_control_active_state(1);*/
+        #endif
 }
 
 static void s5pv210_stop_ehc(void)
 {
 	usb_host_phy_off();
+
+        #ifdef CONFIG_SAMSUNG_PHONE_SVNET
 	mc_control_active_state(0);
+        #endif
 }
 
 static int ehci_hcd_update_device(struct usb_hcd *hcd, struct usb_device *udev)
@@ -358,13 +371,17 @@ static ssize_t store_ehci_power(struct device *dev,
 		s5pv210_stop_ehc();
 		s5pv210_hcd = NULL;
 		/*HSIC IPC control the ACTIVE_STATE*/
+                #ifdef CONFIG_SAMSUNG_PHONE_SVNET
 		mc_control_active_state(0);
+                #endif
 	} else if (power_on == 1) {
 		printk(KERN_DEBUG "%s: EHCI turns on\n", __func__);
 		if (s5pv210_hcd != NULL) {
 			usb_remove_hcd(hcd);
 			/*HSIC IPC control the ACTIVE_STATE*/
+                        #ifdef CONFIG_SAMSUNG_PHONE_SVNET
 			mc_control_active_state(0);
+                        #endif
 		}
 		s5pv210_start_ehc();
 
@@ -379,7 +396,9 @@ static ssize_t store_ehci_power(struct device *dev,
 			goto exit;
 		}
 		/*HSIC IPC control the ACTIVE_STATE*/
+                #ifdef CONFIG_SAMSUNG_PHONE_SVNET
 		mc_control_active_state(1);
+                #endif
 
 		s5pv210_hcd = hcd;
 	}
@@ -435,6 +454,67 @@ static inline void remove_ehci_sys_file(struct ehci_hcd *ehci)
 	device_remove_file(ehci_to_hcd(ehci)->self.controller,
 			&dev_attr_ehci_power);
 }
+
+#ifdef CONFIG_MACH_C1_NA_SPR_REV02
+void usb_host_hsic_power_init()
+{
+        int retval;
+        struct regulator *usb_hsic_reg;
+
+         usb_hsic_reg = regulator_get(NULL, "vhsic");
+         if (IS_ERR(usb_hsic_reg)) {
+                        retval = PTR_ERR(usb_hsic_reg);
+                        //dev_err(&pdev->dev, "No VHSIC_1.2V regualtor: %d\n",
+                          //      retval);
+                        usb_hsic_reg = NULL;
+                }
+
+        if (usb_hsic_reg)
+                retval=regulator_enable(usb_hsic_reg);
+
+		if (s5pv210_onoff_flag == 0) {
+			s5pv210_start_ehc();
+			
+            #if defined(CONFIG_ARCH_S5PV310)
+			writel(0x03C00000, s5pv210_hcd->regs + 0x90);
+            #endif
+			
+			retval = usb_add_hcd(s5pv210_hcd, IRQ_UHOST,
+					IRQF_DISABLED | IRQF_SHARED);
+			if (retval < 0) {
+				//dev_err(dev, "Power On Fail\n");
+				//goto exit;
+			}
+			s5pv210_onoff_flag = 1;
+		}		
+
+}
+EXPORT_SYMBOL(usb_host_hsic_power_init);
+void usb_host_hsic_power_off()
+{
+        int retval;
+        struct regulator *usb_hsic_reg;
+
+		 if (s5pv210_onoff_flag == 1) {
+			 usb_remove_hcd(s5pv210_hcd);
+			 s5pv210_stop_ehc();
+			 s5pv210_onoff_flag = 0;
+		 }
+
+         usb_hsic_reg = regulator_get(NULL, "vhsic");
+         if (IS_ERR(usb_hsic_reg)) {
+                        retval = PTR_ERR(usb_hsic_reg);
+                        //dev_err(, "No VHSIC_1.2V regualtor: %d\n",
+                          //      retval);
+                        usb_hsic_reg = NULL;
+                }
+
+        if (usb_hsic_reg)
+                retval=regulator_disable(usb_hsic_reg);
+
+}
+EXPORT_SYMBOL(usb_host_hsic_power_off);
+#endif
 
 static int ehci_hcd_s5pv210_drv_probe(struct platform_device *pdev)
 {
@@ -505,7 +585,9 @@ static int ehci_hcd_s5pv210_drv_probe(struct platform_device *pdev)
 #endif
 
 		/*HSIC IPC control the ACTIVE_STATE*/
+                #ifdef CONFIG_SAMSUNG_PHONE_SVNET
 		mc_control_active_state(1);
+                #endif
 		return retval;
 	}
 
@@ -530,7 +612,9 @@ static int ehci_hcd_s5pv210_drv_remove(struct platform_device *pdev)
 #endif
 	usb_remove_hcd(hcd);
 	/*HSIC IPC control the ACTIVE_STATE*/
+        #ifdef CONFIG_SAMSUNG_PHONE_SVNET
 	mc_control_active_state(0);
+        #endif
 	iounmap(hcd->regs);
 	release_mem_region(hcd->rsrc_start, hcd->rsrc_len);
 	usb_put_hcd(hcd);

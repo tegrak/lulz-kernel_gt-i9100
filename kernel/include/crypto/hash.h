@@ -10,6 +10,9 @@
  *
  */
 
+#ifdef SEC_FIPS_ENABLED
+#include <crypto/fips_hash.h>
+#else
 #ifndef _CRYPTO_HASH_H
 #define _CRYPTO_HASH_H
 
@@ -351,3 +354,4 @@ int crypto_shash_finup(struct shash_desc *desc, const u8 *data,
 		       unsigned int len, u8 *out);
 
 #endif	/* _CRYPTO_HASH_H */
+#endif

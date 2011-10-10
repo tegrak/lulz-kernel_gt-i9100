@@ -39,6 +39,8 @@
 #define HDMI_ON		1
 #define HDMI_OFF	0
 
+#define RETRY_COUNT	50
+
 struct hpd_struct {
 	spinlock_t lock;
 	wait_queue_head_t waitq;
@@ -53,6 +55,7 @@ struct hpd_struct {
 static struct hpd_struct hpd_struct;
 
 static int last_hpd_state;
+static int last_uevent_state;
 atomic_t hdmi_status;
 atomic_t poll_state;
 
@@ -64,6 +67,7 @@ static void s5p_hpd_kobject_uevent(void)
 	char env_buf[120];
 	char *envp[2];
 	int env_offset = 0;
+	int i = 0;
 	int hpd_state = atomic_read(&hpd_struct.state);
 
 	HPDIFPRINTK("++\n");
@@ -75,31 +79,47 @@ static void s5p_hpd_kobject_uevent(void)
 
 	if (hpd_state)
 	{
-		while(on_stop_process)
+		while(on_stop_process && (i < RETRY_COUNT))
 		{
 			HPDIFPRINTK("on_stop_process\n");
 			msleep(5);
+			i++;
 		};
 	} else {
-		while(on_start_process)
+		while(on_start_process && (i < RETRY_COUNT))
 		{
 			HPDIFPRINTK("on_start_process\n");
 			msleep(5);
+			i++;
 		};
 	}
 
+	if (i == RETRY_COUNT) {
+		on_stop_process = false;
+		on_start_process = false;
+	}
+
+	hpd_state = atomic_read(&hpd_struct.state);
 	if (hpd_state) {
-		sprintf(env_buf, "HDMI_STATE=online");
-		envp[env_offset++] = env_buf;
-		envp[env_offset] = NULL;
-		HPDIFPRINTK("online event\n");
-		kobject_uevent_env(hpd_tvout_kobj, KOBJ_CHANGE, envp);
+		if (last_uevent_state == -1 || last_uevent_state == HPD_LO) {
+			sprintf(env_buf, "HDMI_STATE=online");
+			envp[env_offset++] = env_buf;
+			envp[env_offset] = NULL;
+			HPDIFPRINTK("online event\n");
+			kobject_uevent_env(hpd_tvout_kobj, KOBJ_CHANGE, envp);
+			on_start_process = true;
+		}
+		last_uevent_state = HPD_HI;
 	} else {
-		sprintf(env_buf, "HDMI_STATE=offline");
-		envp[env_offset++] = env_buf;
-		envp[env_offset] = NULL;
-		HPDIFPRINTK("offline event\n");
-		kobject_uevent_env(hpd_tvout_kobj, KOBJ_CHANGE, envp);
+		if (last_uevent_state == -1 || last_uevent_state == HPD_HI) {
+			sprintf(env_buf, "HDMI_STATE=offline");
+			envp[env_offset++] = env_buf;
+			envp[env_offset] = NULL;
+			HPDIFPRINTK("offline event\n");
+			kobject_uevent_env(hpd_tvout_kobj, KOBJ_CHANGE, envp);
+			on_stop_process = true;
+		}
+		last_uevent_state = HPD_LO;
 	}
 	printk("[HDMI] s5p_hpd_kobject_uevent : hpd_state= %d\n",hpd_state);
 }
@@ -193,6 +213,14 @@ static int s5p_hpd_ioctl(struct inode *inode, struct file *file,
 		else
 #endif
 			*status = atomic_read(&hpd_struct.state);
+
+		if (last_uevent_state == -1)
+			last_uevent_state = *status;
+
+		if (last_uevent_state != *status) {
+			on_start_process = false;
+			on_stop_process = false;
+		}
 
 		HPDIFPRINTK("HPD status is %s\n",
 				(*status) ? "plugged" : "unplugged");
@@ -459,6 +487,8 @@ static int __init s5p_hpd_probe(struct platform_device *pdev)
 					(u8)HDMI_IRQ_HPD_PLUG);
 	s5p_hdmi_reg_intc_set_isr(s5p_hpd_irq_handler,
 					(u8)HDMI_IRQ_HPD_UNPLUG);
+
+	last_uevent_state = -1;
 
 	return 0;
 }

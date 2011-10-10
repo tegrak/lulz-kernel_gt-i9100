@@ -563,7 +563,9 @@ void s5p_aftr_cache_clean(unsigned long stack_addr)
 #ifdef L2_FLUSH_ALL_AFTR
 	/* Temporally add to avoid abort */
 	dsb();
-	outer_nolock_flush_all();
+	/* outer_nolock_flush_all() */
+	/* use clean_all to reduce power consumption */
+	outer_nolock_clean_all();
 #else
 	dsb();
 	/* SVC mode stack area is cleaned from L2 cache */

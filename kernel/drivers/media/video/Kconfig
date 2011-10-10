@@ -431,6 +431,12 @@ config VIDEO_S5K5BAFX
 	---help---
 	  This driver supports S5K5BAFX SoC camera module
 
+config VIDEO_S5K5BBGX
+	tristate "S5K5BBGX supporting camera driver"
+	depends on I2C && VIDEO_V4L2 && TARGET_LOCALE_NA
+	---help---
+	  This driver supports S5K5BBGX SoC camera module
+
 config VIDEO_S5K3BA
 	tristate "S5K3BA supporting camera driver"
 	depends on I2C && VIDEO_V4L2
@@ -469,10 +475,6 @@ config VIDEO_M5MO_USE_SWI2C
 	---help---
 	  Support that M5MO camera module uses SW I2C
 
-config VIDEO_DEBUG_NO_FRAME
-	bool "For debugging capture no frame"
-	depends on VIDEO_FIMC_MIPI && VIDEO_S5K5BAFX
-	
 comment "Video and audio decoders"
 
 source "drivers/media/video/cx25840/Kconfig"

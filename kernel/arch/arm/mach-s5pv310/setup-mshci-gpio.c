@@ -54,7 +54,7 @@ void s5pv310_setup_mshci_cfg_gpio(struct platform_device *dev, int width)
 		s3c_gpio_cfgpin(S5PV310_GPK0(2), S3C_GPIO_SFN(3));
 		s3c_gpio_setpull(S5PV310_GPK0(2), S3C_GPIO_PULL_UP);
 	}
-	
+
 	switch (width) {
 	case 8:
 		for (gpio = S5PV310_GPK1(3); gpio <= S5PV310_GPK1(6); gpio++) {

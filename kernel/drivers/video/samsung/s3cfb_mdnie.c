@@ -83,6 +83,15 @@ static char const*const DMB_COLD_MODE_FILE = DMB_COLD_MODE_PATH;
 static char const*const  DMB_COLD_OUTDOOR_MODE_FILE = DMB_COLD_OUTDOOR_MODE_PATH;
 #endif	/* CONFIG_TARGET_LOCALE_KOR */  
 
+#ifdef CONFIG_TARGET_LOCALE_NTT
+static char const*const ISDBT_MODE_FILE = ISDBT_MODE_PATH; 
+static char const*const ISDBT_OUTDOOR_MODE_FILE = ISDBT_OUTDOOR_MODE_PATH;
+static char const*const ISDBT_WARM_MODE_FILE = ISDBT_WARM_MODE_PATH; 
+static char const*const ISDBT_WARM_OUTDOOR_MODE_FILE = ISDBT_WARM_OUTDOOR_MODE_PATH;
+static char const*const ISDBT_COLD_MODE_FILE = ISDBT_COLD_MODE_PATH; 
+static char const*const ISDBT_COLD_OUTDOOR_MODE_FILE = ISDBT_COLD_OUTDOOR_MODE_PATH;
+#endif
+
 
 int mDNIe_txtbuf_to_parsing(char const*  pFilepath);
 
@@ -106,7 +115,12 @@ typedef enum {
 	mDNIe_DMB_MODE = 20,
 	mDNIe_DMB_WARM_MODE,
 	mDNIe_DMB_COLD_MODE,
-#endif	/* CONFIG_TARGET_LOCALE_KOR */  
+#endif	/* CONFIG_TARGET_LOCALE_KOR */
+#ifdef CONFIG_TARGET_LOCALE_NTT
+	mDNIe_ISDBT_MODE = 30,
+	mDNIe_ISDBT_WARM_MODE,
+	mDNIe_ISDBT_COLD_MODE,
+#endif
 } Lcd_mDNIe_UI;
 
 typedef enum {
@@ -444,6 +458,19 @@ void mDNIe_Set_Mode(Lcd_mDNIe_UI mode, u8 mDNIe_Outdoor_OnOff)
 			mDNIe_txtbuf_to_parsing(DMB_COLD_OUTDOOR_MODE_FILE);
 			break;
 #endif /* CONFIG_TARGET_LOCALE_KOR */ 
+#ifdef CONFIG_TARGET_LOCALE_NTT
+		case mDNIe_ISDBT_MODE:
+			mDNIe_txtbuf_to_parsing(ISDBT_OUTDOOR_MODE_FILE);
+			break;
+
+		case mDNIe_ISDBT_WARM_MODE:
+			mDNIe_txtbuf_to_parsing(ISDBT_WARM_OUTDOOR_MODE_FILE);
+			break;
+
+		case mDNIe_ISDBT_COLD_MODE:
+			mDNIe_txtbuf_to_parsing(ISDBT_COLD_OUTDOOR_MODE_FILE);
+			break;
+#endif
 
 		}
 
@@ -499,7 +526,19 @@ void mDNIe_Set_Mode(Lcd_mDNIe_UI mode, u8 mDNIe_Outdoor_OnOff)
 			mDNIe_txtbuf_to_parsing(DMB_COLD_MODE_FILE);
 			break;
 #endif /* CONFIG_TARGET_LOCALE_KOR */ 
+#ifdef CONFIG_TARGET_LOCALE_NTT
+		case mDNIe_ISDBT_MODE:
+			mDNIe_txtbuf_to_parsing(ISDBT_MODE_FILE);
+			break;
 
+		case mDNIe_ISDBT_WARM_MODE:
+			mDNIe_txtbuf_to_parsing(ISDBT_WARM_MODE_FILE);
+			break;
+
+		case mDNIe_ISDBT_COLD_MODE:
+			mDNIe_txtbuf_to_parsing(ISDBT_COLD_MODE_FILE);
+			break;
+#endif
 		}
 
 		current_mDNIe_Mode = mode;
@@ -613,6 +652,19 @@ static ssize_t mdnieset_ui_file_cmd_show(struct device *dev,
 		mdnie_ui = mDNIe_DMB_COLD_MODE;
 		break;
 #endif /* CONFIG_TARGET_LOCALE_KOR */ 		
+#ifdef CONFIG_TARGET_LOCALE_NTT
+	case mDNIe_ISDBT_MODE:
+		mdnie_ui = mDNIe_ISDBT_MODE;
+		break;
+
+	case mDNIe_ISDBT_WARM_MODE:
+		mdnie_ui = mDNIe_ISDBT_WARM_MODE;
+		break;
+
+	case mDNIe_ISDBT_COLD_MODE:
+		mdnie_ui = mDNIe_ISDBT_COLD_MODE;
+		break;
+#endif
 	}
 	return sprintf(buf, "%u\n", mdnie_ui);
 }
@@ -672,6 +724,19 @@ static ssize_t mdnieset_ui_file_cmd_store(struct device *dev,
 		current_mDNIe_Mode = mDNIe_DMB_COLD_MODE;
 		break;
 #endif /* CONFIG_TARGET_LOCALE_KOR */ 
+#ifdef CONFIG_TARGET_LOCALE_NTT
+	case SIG_MDNIE_ISDBT_MODE:
+		current_mDNIe_Mode = mDNIe_ISDBT_MODE;
+		break;
+
+	case SIG_MDNIE_ISDBT_WARM_MODE:
+		current_mDNIe_Mode = mDNIe_ISDBT_WARM_MODE;
+		break;
+
+	case SIG_MDNIE_ISDBT_COLD_MODE:
+		current_mDNIe_Mode = mDNIe_ISDBT_COLD_MODE;
+		break;
+#endif
 
 	default:
 		printk(KERN_ERR "\nmdnieset_ui_file_cmd_store value is wrong : value(%d)\n", value);

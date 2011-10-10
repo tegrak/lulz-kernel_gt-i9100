@@ -53,6 +53,7 @@ struct usbsvn_devdata {
 	unsigned int		tx_pipe;
 	unsigned int		rx_pipe;
 	u8			disconnected;
+	struct sipc_rx_hdr 	rx_hdr;
 };
 
 struct usbsvn {
@@ -253,16 +254,19 @@ static void usbsvn_try_reconnect_work(struct work_struct *work)
 	}
 	if (!svn->reconnect_cnt--) {
 		wake_unlock_pm(svn);
+#ifdef CONFIG_SAMSUNG_PHONE_SVNET
 		/*if (!mc_is_modem_active()) {
 			kobject_uevent_env(&svn->netdev->dev.kobj, KOBJ_OFFLINE,
 				envs); */
 			/*panic("HSIC Disconnected");*/
 			crash_event(0);
 		/*}*/
+#endif
 		goto out;
 	}
-
+#ifdef CONFIG_SAMSUNG_PHONE_SVNET
 	mc_reconnect_gpio();
+#endif
 
 	/*TODO: EHCI off reconnect*/
 
@@ -281,6 +285,7 @@ static void usbsvn_post_resume_work(struct work_struct *work)
 	int spin = 10;
 	int err;
 
+#ifdef CONFIG_SAMSUNG_PHONE_SVNET
 	if (svn->skip_hostwakeup && mc_is_host_wakeup()) {
 		dev_info(dev,
 			"post resume host skip=%d, host gpio=%d, rpm_stat=%d",
@@ -313,6 +318,7 @@ retry:
 		}
 		svn->skip_hostwakeup = 0;
 	}
+#endif
 }
 
 static ssize_t usbsvn_rx_debug_show(struct device *dev,
@@ -453,6 +459,7 @@ retry:
 				msleep(30);
 				goto retry;
 			}
+#ifdef CONFIG_SAMSUNG_PHONE_SVNET
 			err = mc_prepare_resume(200);
 			switch (err) {
 			case MC_SUCCESS:
@@ -469,6 +476,7 @@ retry:
 				_host_high_cnt++;
 				break;
 			}
+#endif
 			if (spin2-- == 0) {
 				dev_err(&ndev->dev,
 				"svn initiated resume, RPM_SUSPEND timeout\n");
@@ -481,7 +489,9 @@ retry:
 					pm_runtime_idle(dev);
 				}
 				share_svn->resume_debug = 0;*/
+#ifdef CONFIG_SAMSUNG_PHONE_SVNET
 				crash_event(0);
+#endif
 				return -ETIMEDOUT;
 			}
 			msleep(20);
@@ -575,6 +585,8 @@ static int usbsvn_write(struct net_device *dev, struct sipc4_tx_data *tx_data)
 		goto exit;
 	}
 	usb_mark_last_busy(svn->usbdev);
+	if (dev_id == SIPC4_RAW)
+		wake_lock_timeout_data(svn);
 
 exit:
 	return err;
@@ -769,6 +781,7 @@ static void rx_complete(struct urb *req)
 		rx_data.size = req->actual_length;
 		rx_data.format = dev_id;
 		rx_data.flags = flags;
+		rx_data.rx_hdr = &svn->devdata[dev_id].rx_hdr;
 
 		page = NULL;
 
@@ -1124,11 +1137,13 @@ static void usbsvn_disconnect(struct usb_interface *intf)
 		cancel_work_sync(&svn->post_resume_work);
 		if (!svn->driver_info) {
 			/*TODO:check the Phone ACTIVE pin*/
+#ifdef CONFIG_SAMSUNG_PHONE_SVNET
 			if (mc_is_modem_active()) {
 				svn->reconnect_cnt = 2;
 				schedule_delayed_work(&svn->try_reconnect_work,
 					10);
 			}
+#endif
 			wake_unlock_pm(svn);
 		}
 	}

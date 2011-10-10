@@ -46,8 +46,10 @@
 #define NUM_ACTUATORS	1
 
 #define PWM_DUTY_MAX    579 /* 13MHz / (579 + 1) = 22.4kHz */
-#if defined (CONFIG_TARGET_LOCALE_KOR) || defined (CONFIG_TARGET_LOCALE_NTT)
+#if defined (CONFIG_TARGET_LOCALE_KOR) || defined (CONFIG_TARGET_LOCALE_NA)
 #define FREQ_COUNT	44643
+#elif defined (CONFIG_TARGET_LOCALE_NTT)
+#define FREQ_COUNT      44138
 #else
 #define FREQ_COUNT	38022
 #endif
@@ -139,14 +141,16 @@ IMMVIBESPIAPI VibeStatus ImmVibeSPI_ForceOut_AmpDisable(VibeUInt8 nActuatorIndex
 			regulator = regulator_get(NULL, "vmotor");
 
 			if (IS_ERR(regulator)) {
-				DbgOut((KERN_ERR"Failed to get vmoter regulator.\n"));
+				DbgOut((KERN_ERR "Failed to get vmoter regulator.\n"));
 				return 0;
 			}
 
-			regulator_disable(regulator);
+			regulator_force_disable(regulator);
 			regulator_put(regulator);
 
 			regulator_hapticmotor_enabled = 0;
+
+			printk(KERN_DEBUG "tspdrv: %s (%d)\n", __func__, regulator_hapticmotor_enabled);
 		}
 
 		vibe_control_max8997(Immvib_pwm, 0);
@@ -185,7 +189,7 @@ IMMVIBESPIAPI VibeStatus ImmVibeSPI_ForceOut_AmpEnable(VibeUInt8 nActuatorIndex)
 		regulator = regulator_get(NULL, "vmotor");
 
 		if (IS_ERR(regulator)) {
-			DbgOut((KERN_ERR"Failed to get vmoter regulator.\n"));
+			DbgOut((KERN_ERR "Failed to get vmoter regulator.\n"));
 			return 0;
 		}
 
@@ -193,6 +197,8 @@ IMMVIBESPIAPI VibeStatus ImmVibeSPI_ForceOut_AmpEnable(VibeUInt8 nActuatorIndex)
 		regulator_put(regulator);
 
 		regulator_hapticmotor_enabled = 1;
+
+		printk(KERN_DEBUG "tspdrv: %s (%d)\n", __func__, regulator_hapticmotor_enabled);
 	}
 
 	return VIBE_S_SUCCESS;

@@ -39,7 +39,7 @@ struct ld9040_panel_data {
 	const unsigned short **gamma_sm2_a2_22_table;
 	const unsigned short **acl_table;
 	const unsigned short **elvss_table;
-	const unsigned short **elvss_sm2_table; 
+	const unsigned short **elvss_sm2_table;
 	const unsigned short *acl_on;
 	const unsigned short *elvss_on;
 	int gamma_table_size;
@@ -48,4 +48,3 @@ struct ld9040_panel_data {
 #define	LCDTYPE_M2		(1)
 #define	LCDTYPE_SM2_A1		(0)
 #define	LCDTYPE_SM2_A2		(2)
-

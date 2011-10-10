@@ -94,7 +94,11 @@ static int k3dh_read_accel_raw_xyz(struct k3dh_data *k3dh,
 
 	acc->x = acc->x >> 4;
 	acc->y = acc->y >> 4;
+	#if defined(CONFIG_MACH_C1_NA_SPR_REV05)	
+	acc->z = -acc->z >> 4;
+	#else
 	acc->z = acc->z >> 4;
+	#endif
 
 	return 0;
 }

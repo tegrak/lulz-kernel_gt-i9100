@@ -45,9 +45,18 @@ enum sipc4_format {
 #define SIPC4_CMD_SUSPEND		(CMD_VALID|CMD_INT|0xA)
 #define SIPC4_CMD_RESUME		(CMD_VALID|CMD_INT|0xB)
 
+#define SIPC4_MAX_HDR_SIZE 	48
+
 struct sipc4_tx_data {
 	struct sk_buff		*skb;
 	unsigned char		res;
+};
+
+struct sipc_rx_hdr {
+	int len;
+	int flag_len;
+	char start;
+	char hdr[SIPC4_MAX_HDR_SIZE];
 };
 
 struct sipc4_rx_data {
@@ -57,6 +66,7 @@ struct sipc4_rx_data {
 	int			size;
 	int			format;
 	int			flags;
+	struct sipc_rx_hdr 	*rx_hdr;
 };
 
 struct sipc4_rx_frag {

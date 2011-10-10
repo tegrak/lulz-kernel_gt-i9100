@@ -266,8 +266,6 @@ static void sec_jack_set_type(struct sec_jack_info *hi, int jack_type)
 
 static void handle_jack_not_inserted(struct sec_jack_info *hi)
 {
-	struct sec_jack_platform_data *pdata = hi->pdata;
-
 	sec_jack_set_type(hi, SEC_JACK_NO_DEVICE);
 	hi->pdata->set_micbias_state(false);
 }
@@ -300,6 +298,9 @@ static void determine_jack_type(struct sec_jack_info *hi)
 		for (i = 0; i < size; i++) {
 			if (adc <= zones[i].adc_high) {
 				if (++count[i] > zones[i].check_count) {
+					#ifdef CONFIG_TARGET_LOCALE_NTT
+					pr_info("%s : to set type,last read adc=%d\n", __func__, adc);
+					#endif
 					sec_jack_set_type(hi, zones[i].jack_type);
 					return;
 				}

@@ -168,7 +168,7 @@
 #define WLFC_CTL_PKTFLAG_DISCARD		0
 /* D11 suppressed a packet */
 #define WLFC_CTL_PKTFLAG_D11SUPPRESS	1
-/* WL firmware suppressed a packet because MAC is 
+/* WL firmware suppressed a packet because MAC is
 	already in PSMode (short time window)
 */
 #define WLFC_CTL_PKTFLAG_WLSUPPRESS		2

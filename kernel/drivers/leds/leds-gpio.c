@@ -19,6 +19,9 @@
 
 #include <asm/gpio.h>
 
+#ifndef CONFIG_LEDS_GPIO_PLATFORM
+#define CONFIG_LEDS_GPIO_PLATFORM
+#endif /* CONFIG_LEDS_GPIO_PLATFORM */
 struct gpio_led_data {
 	struct led_classdev cdev;
 	unsigned gpio;
@@ -31,6 +34,10 @@ struct gpio_led_data {
 			unsigned long *delay_on, unsigned long *delay_off);
 };
 
+#ifdef CONFIG_TARGET_LOCALE_NA
+#define ADC_DATA_ARR_SIZE  6
+extern int s3c_adc_get_adc_data(int channel);
+#endif /* CONFIG_TARGET_LOCALE_NA */
 static void gpio_led_work(struct work_struct *work)
 {
 	struct gpio_led_data	*led_dat =
@@ -155,7 +162,12 @@ static void delete_gpio_led(struct gpio_led_data *led)
 static int __devinit gpio_led_probe(struct platform_device *pdev)
 {
 	struct gpio_led_platform_data *pdata = pdev->dev.platform_data;
+#ifdef CONFIG_TARGET_LOCALE_NA
+	struct gpio_led *cur_led;
+	struct gpio_led_data *leds_data, *led_dat;
+#else
 	struct gpio_led_data *leds_data;
+#endif /* CONFIG_TARGET_LOCALE_NA */	
 	int i, ret = 0;
 
 	if (!pdata)
@@ -167,10 +179,42 @@ static int __devinit gpio_led_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	for (i = 0; i < pdata->num_leds; i++) {
+	
+#ifdef CONFIG_TARGET_LOCALE_NA
+		cur_led = &pdata->leds[i];
+		led_dat = &leds_data[i];
+
+		ret = gpio_request(cur_led->gpio, cur_led->name);
+#else
 		ret = create_gpio_led(&pdata->leds[i], &leds_data[i],
 				      &pdev->dev, pdata->gpio_blink_set);
+#endif /* CONFIG_TARGET_LOCALE_NA */
 		if (ret < 0)
 			goto err;
+#ifdef CONFIG_TARGET_LOCALE_NA
+		led_dat->cdev.name = cur_led->name;
+		led_dat->cdev.default_trigger = cur_led->default_trigger;
+		led_dat->gpio = cur_led->gpio;
+		led_dat->can_sleep = gpio_cansleep(cur_led->gpio);
+		led_dat->active_low = cur_led->active_low;
+		if (pdata->gpio_blink_set) {
+			led_dat->platform_gpio_blink_set = pdata->gpio_blink_set;
+			led_dat->cdev.blink_set = gpio_blink_set;
+		}
+		led_dat->cdev.brightness_set = gpio_led_set;
+		led_dat->cdev.brightness = LED_OFF;
+		led_dat->cdev.flags |= LED_CORE_SUSPENDRESUME;
+
+		gpio_direction_output(led_dat->gpio, led_dat->active_low);
+
+		INIT_WORK(&led_dat->work, gpio_led_work);
+
+		ret = led_classdev_register(&pdev->dev, &led_dat->cdev);
+		if (ret < 0) {
+			gpio_free(led_dat->gpio);
+			goto err;
+		}
+#endif /* CONFIG_TARGET_LOCALE_NA */
 	}
 
 	platform_set_drvdata(pdev, leds_data);
@@ -178,8 +222,18 @@ static int __devinit gpio_led_probe(struct platform_device *pdev)
 	return 0;
 
 err:
+#ifdef CONFIG_TARGET_LOCALE_NA
+	if (i > 0) {
+		for (i = i - 1; i >= 0; i--) {
+			led_classdev_unregister(&leds_data[i].cdev);
+			cancel_work_sync(&leds_data[i].work);
+			gpio_free(leds_data[i].gpio);
+		}
+	}
+#else		
 	for (i = i - 1; i >= 0; i--)
 		delete_gpio_led(&leds_data[i]);
+#endif /* CONFIG_TARGET_LOCALE_NA */
 
 	kfree(leds_data);
 
@@ -194,13 +248,54 @@ static int __devexit gpio_led_remove(struct platform_device *pdev)
 
 	leds_data = platform_get_drvdata(pdev);
 
+#ifdef CONFIG_TARGET_LOCALE_NA
+	for (i = 0; i < pdata->num_leds; i++) {
+		led_classdev_unregister(&leds_data[i].cdev);
+		cancel_work_sync(&leds_data[i].work);
+		gpio_free(leds_data[i].gpio);
+	}
+#else	
 	for (i = 0; i < pdata->num_leds; i++)
 		delete_gpio_led(&leds_data[i]);
+#endif /* CONFIG_TARGET_LOCALE_NA */
 
 	kfree(leds_data);
 
 	return 0;
 }
+
+#ifdef CONFIG_TARGET_LOCALE_NA
+static int check_hw_version(void)
+{
+	int adc_arr[ADC_DATA_ARR_SIZE];
+	int adc_max = 0;
+	int adc_min = 0;
+	int adc_total = 0;
+	int i;
+	int hw_version = 0;
+
+	for (i = 0; i < ADC_DATA_ARR_SIZE; i++) {
+		adc_arr[i] = 1;//s3c_adc_get_adc_data(7);
+		if (i != 0) {
+			if (adc_arr[i] > adc_max) 
+				adc_max = adc_arr[i];
+			else if (adc_arr[i] < adc_min)
+				adc_min = adc_arr[i];
+		} else {
+			adc_max = adc_arr[0];
+			adc_min = adc_arr[0];
+		}
+		adc_total += adc_arr[i];
+	}
+
+	hw_version = (adc_total - adc_max - adc_min) / (ADC_DATA_ARR_SIZE - 2);
+
+	if (hw_version >= 630)
+		return 1;	// LED supported !
+	else
+		return 1;	// LED not supported !
+}
+#endif /* CONFIG_TARGET_LOCALE_NA */
 
 static struct platform_driver gpio_led_driver = {
 	.probe		= gpio_led_probe,
@@ -319,6 +414,10 @@ static int __init gpio_led_init(void)
 	int ret;
 
 #ifdef CONFIG_LEDS_GPIO_PLATFORM	
+#ifdef CONFIG_TARGET_LOCALE_NA
+	if (check_hw_version() == 0)
+		return -ENODEV;
+#endif /* CONFIG_TARGET_LOCALE_NA */		
 	ret = platform_driver_register(&gpio_led_driver);
 	if (ret)
 		return ret;
@@ -350,3 +449,4 @@ module_exit(gpio_led_exit);
 MODULE_AUTHOR("Raphael Assenat <raph@8d.com>, Trent Piepho <tpiepho@freescale.com>");
 MODULE_DESCRIPTION("GPIO LED driver");
 MODULE_LICENSE("GPL");
+MODULE_ALIAS("platform:leds-gpio");

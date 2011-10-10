@@ -162,6 +162,17 @@ static void l2x0_clean_all(void)
 	spin_unlock_irqrestore(&l2x0_lock, flags);
 }
 
+static void l2x0_nolock_clean_all(void)
+{
+	unsigned long flags;
+	unsigned long tmp;
+
+	writel_relaxed(l2x0_way_mask, l2x0_base + L2X0_CLEAN_WAY);
+	cache_wait_way(l2x0_base + L2X0_CLEAN_WAY, l2x0_way_mask);
+	cache_sync();
+
+}
+
 static void l2x0_inv_all(void)
 {
 	unsigned long flags;
@@ -355,6 +366,7 @@ void __init l2x0_init(void __iomem *base, __u32 aux_val, __u32 aux_mask)
 	outer_cache.inv_all = l2x0_inv_all;
 	outer_cache.disable = l2x0_disable;
 	outer_cache.nolock_flush_all = l2x0_nolock_flush_all;
+	outer_cache.nolock_clean_all = l2x0_nolock_clean_all;
 
 	printk(KERN_INFO "%s cache controller enabled\n", type);
 	printk(KERN_INFO "l2x0: %d ways, CACHE_ID 0x%08x, AUX_CTRL 0x%08x, Cache Size: %d B\n",

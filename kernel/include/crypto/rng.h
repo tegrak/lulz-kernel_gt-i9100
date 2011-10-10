@@ -10,6 +10,9 @@
  *
  */
 
+#ifdef SEC_FIPS_ENABLED
+#include <crypto/fips_rng.h>
+#else
 #ifndef _CRYPTO_RNG_H
 #define _CRYPTO_RNG_H
 
@@ -72,4 +75,5 @@ static inline int crypto_rng_seedsize(struct crypto_rng *tfm)
 	return crypto_rng_alg(tfm)->seedsize;
 }
 
+#endif
 #endif

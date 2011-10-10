@@ -778,7 +778,7 @@ dhd_prot_stop(dhd_pub_t *dhd)
 
 dhd_pub_t *dhd_get_pub(struct net_device *dev); /* dhd_linux.c */
 
-extern void dhd_set_packet_filter(int value, dhd_pub_t *dhd);
+void dhd_set_packet_filter(int value, dhd_pub_t *dhd);
 
 int dhd_deepsleep(struct net_device *dev, int flag) 
 {

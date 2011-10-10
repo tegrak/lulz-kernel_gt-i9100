@@ -32,6 +32,8 @@
 #include <linux/hrtimer.h>
 #endif
 
+#define S5K5BAFX_BURST_MODE
+
 #ifdef CONFIG_LOAD_FILE
 #include <linux/vmalloc.h>
 #include <linux/fs.h>
@@ -455,6 +457,22 @@ static int s5k5bafx_write_regs(struct v4l2_subdev *sd,
 	int ret = -EAGAIN;
 	u32 temp = 0;
 	u16 delay = 0;
+	int retry_count = 5;
+
+#ifdef S5K5BAFX_BURST_MODE
+	u16 addr, value;
+
+	int len = 0;
+	u8 buf[SZ_2K] = {0,};
+#else
+	u8 buf[4] = {0,};
+#endif
+	struct i2c_msg msg = {
+		msg.addr = client->addr,
+		msg.flags = 0,
+		msg.len = 4,
+		msg.buf = buf,
+	};
 
 	while (num--) {
 		temp = *packet++;
@@ -467,22 +485,57 @@ static int s5k5bafx_write_regs(struct v4l2_subdev *sd,
 			continue;
 		}
 
-		ret = s5k5bafx_write(client, temp);
+#ifdef S5K5BAFX_BURST_MODE
+		addr = temp >> 16;
+		value = temp & 0xFFFF;
 
-		/* In error circumstances
-		 *Give second shot
-		 */
-		if (unlikely(ret)) {
-			cam_warn("i2c retry one more time\n");
-			ret = s5k5bafx_write(client, temp);
-
-			/* Give it one more shot */
-			if (unlikely(ret)) {
-				cam_warn("i2c retry twice\n");
-				ret = s5k5bafx_write(client, temp);
-				break;
+		switch (addr) {
+		case 0x0F12:
+			if (len == 0) {
+				buf[len++] = addr >> 8;
+				buf[len++] = addr & 0xFF;
 			}
+			buf[len++] = value >> 8;
+			buf[len++] = value & 0xFF;
+
+			if ((*packet >> 16) != addr) {
+				msg.len = len;
+				goto s5k5bafx_burst_write;
+			}
+			break;
+
+		case 0xFFFF:
+			break;
+
+		default:
+			msg.len = 4;
+			*(u32 *)buf = cpu_to_be32(temp);
+			goto s5k5bafx_burst_write;
 		}
+
+		continue;
+#else
+		*(u32 *)buf = cpu_to_be32(temp);
+#endif
+
+#ifdef S5K5BAFX_BURST_MODE
+s5k5bafx_burst_write:
+		len = 0;
+#endif
+		retry_count = 5;
+
+		while (retry_count--) {
+			ret = i2c_transfer(client->adapter, &msg, 1);
+			if (likely(ret == 1))
+				break;
+			mdelay(10);
+		}
+
+		if (unlikely(ret < 0)) {
+			cam_err("ERR - 0x%08x write failed err=%d\n", (u32)packet, ret);
+			break;
+		}
+
 #ifdef S5K5BAFX_USLEEP
 		if (unlikely(state->vt_mode))
 			if (!(num%200))
@@ -659,7 +712,6 @@ static int s5k5bafx_set_preview_stop(struct v4l2_subdev *sd)
 
 static int s5k5bafx_set_capture_start(struct v4l2_subdev *sd)
 {
-	struct s5k5bafx_state *state = to_state(sd);
 	int err = -EINVAL;
 
 	/* set initial regster value */
@@ -1003,7 +1055,7 @@ static int s5k5bafx_init(struct v4l2_subdev *sd, u32 val)
 		}
 	} else {
 		cam_info("load recording setting\n");
-#ifdef CONFIG_TARGET_LOCALE_KOR
+#if defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_NAATT)
 		err = s5k5bafx_write_regs_from_sd(sd,
 			"s5k5bafx_recording_60Hz_common");
 #else
@@ -1033,7 +1085,7 @@ static int s5k5bafx_init(struct v4l2_subdev *sd, u32 val)
 		}
 	} else {
 		cam_info("load recording setting\n");
-#ifdef CONFIG_TARGET_LOCALE_KOR
+#if defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_NAATT)
 		err = s5k5bafx_write_regs(sd, s5k5bafx_recording_60Hz_common,
 			sizeof(s5k5bafx_recording_60Hz_common) / \
 			sizeof(s5k5bafx_recording_60Hz_common[0]));
