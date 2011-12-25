@@ -1295,8 +1295,8 @@ static int s5pv310_target(struct cpufreq_policy *policy,
 
 	if (s5pv310_max_armclk == ARMCLOCK_1204MHZ) {
 #ifdef CONFIG_FREQ_STEP_UP_L2_L0
-		//interactive governor, prevent stepping by tegrak
-		/* force jump 1 step by tegrak */
+		// interactive and lulzactive governor, prevent stepping
+		// force jump 1 step by tegrak
 		if (index == L0 && !interactive && !lulzactive) {
 			if (old_index > L4)
 				index = L4;
